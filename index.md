@@ -14,7 +14,7 @@ My long-term goal is to eventually do professional vulnerability research.
  *  Windows kernel driver fuzzing (~3 months)
  *  EasyAntiCheat reversal (6-7 months).
 
-###### Header 6
+##### Header 6
 
 | head1        | head two          | three |
 |:-------------|:------------------|:------|
