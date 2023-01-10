@@ -6,19 +6,15 @@ Text can be **bold**, _italic_, or ~~strikethrough~~.
 
 [Link to another page](./another-page.html).
 
-There should be whitespace between paragraphs.
-
-There should be whitespace between paragraphs. We recommend including a README, or a file with information about your project.
-
-# Header 1
-
-This is a normal paragraph following a header. GitHub is a code hosting platform for version control and collaboration. It lets you and others work together on projects from anywhere.
-
 ## Header 2
 
-> This is a blockquote following a header.
->
-> When something is important enough, you do it even if the odds are not in your favor.
+Hello! I'm a 17 year old in the USA who is passionate about low-level programming and cybersecurity. I've been writing many small projects related to windows internals, devirtualization and reverse engineering for years, but I've only recently begun working on large, long-term projects. Thankfully 
+
+My long-term goal is to eventually do professional vulnerability research.  
+
+By the end of 2023, I hope to finish two projects: Windows kernel driver fuzzing (~3 months) and EasyAntiCheat reverse engineering (6-7 months).
+
+
 
 ### Header 3
 
