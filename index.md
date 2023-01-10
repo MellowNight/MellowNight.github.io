@@ -10,7 +10,7 @@ Text can be **bold**, _italic_, or ~~strikethrough~~.
 
 Hello! 
 
-I'm a 17 year old in the USA who is passionate about low-level programming and cybersecurity. I've been programming since I was 13, but I've only recently begun working on large, long-term projects. My special interests are Windows internals, software obfuscation, and hardware virtualization.
+I'm a 17 year old in the USA who is passionate about low-level programming and cybersecurity. I've been programming since I was 13, but I've only recently begun working on large, long-term projects. I have a special focus on Windows internals, software obfuscation, and virtualization technology.
 
 My long-term goal is to eventually do professional vulnerability research.  
 
