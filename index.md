@@ -10,7 +10,7 @@ I'm a 17 year old in the USA who is passionate about low-level programming and c
 
 My long-term goal is to eventually do professional vulnerability research.  
 
-##### By the end of 2023, I hope to finish two projects: 
+#### By the end of 2023, I hope to finish two projects: 
  *  Windows kernel driver fuzzing (~3 months)
  *  EasyAntiCheat reversal (6-7 months).
 
