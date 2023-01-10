@@ -21,6 +21,8 @@ sidebar:
   - name: Linkedin
     icon: <i class="fa-brands fa-linkedin"></i>
     link: https://www.linkedin.com
+  - name: Discord: MellowNight#9746
+    icon: <i class="fa-brands fa-discord"></i>
 
 # https://github.com/github/pages-gem/issues/399#issuecomment-301827749
 # When running locally, we run into the following error —
