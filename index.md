@@ -6,7 +6,7 @@ Text can be **bold**, _italic_, or ~~strikethrough~~.
 
 [Link to another page](./another-page.html).
 
-## Header 2
+## About me
 
 Hello! I'm a 17 year old in the USA who is passionate about low-level programming and cybersecurity. I've been programming since I was 13, but I've only recently begun working on large, long-term projects. My special interests are Windows internals, software obfuscation, and hardware virtualization.
 
