@@ -2,7 +2,7 @@
 layout: default
 ---
 
-## Welcome to another page
+## LIST OF POSTS HERE
 
 _yay_
 
