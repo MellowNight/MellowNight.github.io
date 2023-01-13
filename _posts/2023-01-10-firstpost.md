@@ -41,7 +41,7 @@ Based on nested page table hooks, I
 
 ### Branch Tracing
 
-My implementation of branch tracing utilizes LBR (Last Branch Record) to record branch information and BTF (Branch Trap Flag) to report branches executed by the thread to the hypervisor. I wanted to use the LBR stack alone, but AMD doesn't provide a LBR stack vmexit to signal to me when the LBR stack is full  :((((. I also considered 
+My implementation of branch tracing utilizes LBR (Last Branch Record) to record LastBranchToIP and LastBranchFromIP, and BTF (Branch Trap Flag) to throw #DB to the hypervisor for every branch executed. Using the LBR stack without BTF would greatly reduce overhead, but AMD doesn't provide any mechanism to signal when the LBR stack is full :((((. I also considered 
 
 When I wanted to test extended debug features in my hypervisor, I was misled by some inconsistencies that VMware and Windows had with the AMD system programming manual. 
 
