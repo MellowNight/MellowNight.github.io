@@ -5,18 +5,20 @@ categories: CATEGORY-1 CATEGORY-2
 
 ## Introduction
 
-A while ago, I wrote an AMD hypervisor with the intention of being able to hide an internal cheat from Battleye. My alternatives were to write a devirtualizer for VMProtect. This is by no means a complete hypervisor with.
+A while ago, I wrote a type-2 AMD hypervisor with the intention of being able to dynamically analyze anti-cheats and hide the memory of internal cheats. I no longer want to treat the anti-cheat as a black box, which is why I deferred working on this project so that I can study more about devirtualization. This is by no means a very mature hypervisor with an interface to handle every guest hardware call. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Even though KVM has its advantages, ForteVisor will always be useful for me as a library for building minimal, stealthy, dynamic analysis tools and writing hacks.
 
-I will be going over how my AMD hypervisor 
-#### By the end of 2023, I hope to finish two projects: 
- *  Windows kernel driver fuzzing (~3 months)
- *  EasyAntiCheat reversal (6-7 months).
+I will outline the implementation details of my AMD hypervisor, and explain some potential issues with its functionality. 
 
-##### Header 6
+## VM setup 
 
-| head1        | head two          | three |
-|:-------------|:------------------|:------|
-| ok           | good swedish fish | nice  |
-| out of stock | good and plenty   | nice  |
-| ok           | good `oreos`      | hmm   |
-| ok           | good `zoute` drop | yumm  |
+## VM exit
+
+## Sandboxing 
+
+## Read Write logging
+
+## Branch Tracing
+
+## Process-specific syscall hooks
+
+## Nested Page Table hooks
