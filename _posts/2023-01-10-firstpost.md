@@ -5,26 +5,53 @@ categories: CATEGORY-1 CATEGORY-2
 
 ## Introduction
 
-A while ago, I wrote a type-2 AMD hypervisor with the intention of being able to dynamically analyze anti-cheats and hide the memory of internal cheats. I no longer want to treat the anti-cheat as a black box, which is why I deferred working on this project so that I can study more about devirtualization. This is by no means a very mature hypervisor with an interface to handle every guest hardware call. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, ForteVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
+A while ago, I wrote a type-2 AMD hypervisor with the intention of being able to dynamically analyze anti-cheats and hide the memory of internal cheats. I no longer want to treat protected software as a black box, which is why I stopped working on this project so that I can study more about devirtualization. This is by no means a mature hypervisor that supports interfacing with every guest hardware call. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, ForteVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
 
-I will outline the implementation details of my AMD hypervisor, and explain some potential issues with its functionality. 
+I will outline the implementation details of my AMD hypervisor, and explain some potential issues throughout the process. 
 
 ## VM setup
 
+### Loading the HV driver
+
+To start off, I decided to load my hypervisor with KDMapper but I got some mysterious crashes. The crash dump was corrupted, and it didn't give me any helpful information. Why didn't I crash when using OSRLoader?
+
+Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from inside kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! By launching my hypervisor from a system thread, my host page tables will be based off of the SYSTEM process, which never exits. 
+
 ### Checking for AMD-V support 
 
-kdmapper modifications
-Before any initialization, I check if the model specific registers for 
+Before any VM initialization, three conditions must be met:
+
+1. AMD SVM must be supported.
+2. Virtualization must be enabled in BIOS.
+3. The SR_EFER.svme bit is set, after conditions #1 and #2 are met.
+
+
+```
+
+int32_t	cpu_info[4] = { 0 };
+
+__cpuid(cpu_info, CPUID::processor_feature_identifier);
+
+if ((cpu_info[2] & (1 << 1)) == 0)
+{
+    return false;
+}
+```
 
 ### Setting up the VMCB
+
+
 
 ### Setting up the MSR permissions map
 
 
 ### Setting up nested paging
 
-### Putting it all together
+Nested paging/AMD RVI is a feature that adds a second layer of paging that translates guest physical addresses to host physical addresses. So many cool tricks can 
 
+### vmmcall interface
+
+### Putting it all together
 
 
 ## VM launch and VM exit operation
@@ -52,3 +79,7 @@ Secondly, Windows manages debugctl features in a special way. According to the A
 ### Process-specific syscall hooks
 
 in progress...
+
+## Future plans
+
+I have more interesting projects to work on, but if I ever decide to extend my hypervisor, I would write a x64dbg plugin to interface with it.
