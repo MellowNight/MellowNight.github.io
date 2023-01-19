@@ -210,7 +210,33 @@ I'm identity mapping guest physical addresses are 1:1 mapped to host physical ad
 
 ### Processor consistency checks
 
-According to the AMD manual, 
+According to the AMD manual, any of the following conditions will trigger an invalid guest state #VMEXIT: 
+
+• EFER.SVME is zero.
+• CR0.CD is zero and CR0.NW is set.
+• CR0[63:32] are not zero.
+• Any MBZ bit of CR3 is set.
+• Any MBZ bit of CR4 is set.
+• DR6[63:32] are not zero.
+• DR7[63:32] are not zero.
+• Any MBZ bit of EFER is set.
+• EFER.LMA or EFER.LME is non-zero and this processor does not support long mode.
+• EFER.LME and CR0.PG are both set and CR4.PAE is zero.
+• EFER.LME and CR0.PG are both non-zero and CR0.PE is zero.
+• EFER.LME, CR0.PG, CR4.PAE, CS.L, and CS.D are all non-zero.
+• The VMRUN intercept bit is clear.
+• The MSR or IOIO intercept tables extend to a physical address that is greater than or equal to the
+maximum supported physical address.
+• Illegal event injection (Section 15.20).
+• ASID is equal to zero.
+• Any reserved bit is set in S_CET
+• CR4.CET=1 when CR0.WP=0
+• CR4.CET=1 and U_CET.SS=1 when EFLAGS.VM=1
+• Any reserved bit set in U_CET (SEV_ES only):
+	- VMRUN results in VMEXIT(INVALID)
+	- VMEXIT forces reserved bits to 0
+
+I 
 
 ### vmmcall interface
 

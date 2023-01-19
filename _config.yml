@@ -7,7 +7,7 @@ description: |
               Learning since October 2018  
 show_downloads: false
 google_analytics: UA-108144808-1
-color-scheme: auto
+color-scheme: light
 plugins:
   - jekyll-sitemap
   - jekyll-seo-tag
