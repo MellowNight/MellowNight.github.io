@@ -1,3 +1,8 @@
+layout: post
+title: "POST-TITLE"
+date: YYYY-MM-DD hh:mm:ss -0000
+categories: CATEGORY-1 CATEGORY-2
+
 ## Introduction
 
 A while ago, I wrote a type-2 AMD hypervisor with the intention of dynamically analyzing anti-cheats and hiding internal cheats. I no longer want to treat protected software as a black box, which is why I stopped working on this project to study other topics such as deobfuscation. This is by no means a mature hypervisor that intercepts every guest hardware call. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, ForteVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
@@ -125,6 +130,42 @@ The Virtual Machine Control Block (VMCB) contains all the information used by th
 I configured the MSR permissions map to only exit on reads and writes to the EFER msr. SVM status can be hidden by setting the EFER.svme bit in rax to 0, after handling the read from the EFER MSR. EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever an MSR outside of the MSR ranges specified in the manual is written to. 
 
 ```
+void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
+{
+    uint32_t msr_id = guest_regs->rcx & (uint32_t)0xFFFFFFFF;
+
+    if (!(((msr_id > 0) && (msr_id < 0x00001FFF)) || ((msr_id > 0xC0000000) && (msr_id < 0xC0001FFF)) || (msr_id > 0xC0010000) && (msr_id < 0xC0011FFF)))
+    {
+        /*  PUBG and Fortnite's unimplemented MSR checks    */
+
+        InjectException(core_data, EXCEPTION_GP_FAULT, true, 0);
+        core_data->guest_vmcb.save_state_area.Rip = core_data->guest_vmcb.control_area.NRip;
+
+        return;
+    }
+
+    LARGE_INTEGER   msr_value{ msr_value.QuadPart = __readmsr(msr_id) };
+
+    switch (msr_id)
+    {
+    case MSR::EFER:
+    {
+        auto efer = (MsrEfer*)&msr_value.QuadPart;
+
+        Logger::Get()->Log(" MSR::EFER caught, msr_value.QuadPart = %p \n", msr_value.QuadPart);
+
+        efer->svme = 0;
+        break;
+    }
+    default:
+        break;
+    }
+
+    core_data->guest_vmcb.save_state_area.Rax = msr_value.LowPart;
+    guest_regs->rdx = msr_value.HighPart;
+
+    core_data->guest_vmcb.save_state_area.Rip = core_data->guest_vmcb.control_area.NRip;
+}
 ```
 
 ### Setting up nested paging
