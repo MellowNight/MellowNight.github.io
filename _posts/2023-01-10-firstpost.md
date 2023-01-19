@@ -7,17 +7,17 @@ categories: CATEGORY-1 CATEGORY-2
 
 ## Introduction
 
-A while ago, I wrote a type-2 AMD hypervisor to dynamically analyze anti-cheats and hide internal cheats. I no longer want to treat protected software as a black box, which is why I stopped working on this project to study other topics such as deobfuscation. This is by no means a mature hypervisor that intercepts every guest hardware call. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, ForteVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
+A while ago, I wrote a type-2 AMD hypervisor to dynamically analyze anti-cheats and hide internal cheats. I no longer want to treat protected software as a black box, which is why I stopped working on this project to study other topics such as deobfuscation. This is by no means a mature hypervisor that intercepts every special guest instruction. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, ForteVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
 
 I will outline the implementation details of my AMD hypervisor, and explain some potential issues throughout the process. 
 
 ## Virtual machine setup
 
-### Loading the HV driver
+### Loading the hypervisor
 
 To start off, I tried to load my hypervisor with KDMapper but I got some mysterious crashes. The crash dump was corrupted, so it didn't give me any helpful information. Why didn't I crash when using OSRLoader?
 
-Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from within kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, so that my hypervisor host can be safely mapped into the page tables of the system process, which never exits.  
+Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from within kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, so that my hypervisor host can be mapped into the page tables of the system process, which never exits.  
 
 
 
@@ -127,12 +127,9 @@ void EnableSvme()
 
 The Virtual Machine Control Block (VMCB) contains core-specific information about the AMD virtual machine's state. It is split into two parts: the save state area and the control area.
 
-The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. I simply copied host register values to the save state area.
+The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. Host register values are simply copied to the save state area in ForteVisor.
 
-
-
-
-
+picture here:
 
 ### MSR intercepts
 
@@ -169,7 +166,7 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
     {
         auto efer = (MsrEfer*)&msr_value.QuadPart;
 
-        Logger::Get()->Log(" MSR::EFER caught, msr_value.QuadPart = %p \n", msr_value.QuadPart);
+        Logger::Get()->Log("MSR::EFER caught, msr_value.QuadPart = %p \n", msr_value.QuadPart);
 
         efer->svme = 0;
         break;
@@ -183,13 +180,17 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 }
 ```
 
-*Preventing unimplemented MSR access*
+*Preventing crashes from unimplemented MSR access*
 
 ```cpp
 // ...
 uint32_t msr_id = guest_regs->rcx & (uint32_t)0xFFFFFFFF;
 
-if (!(((msr_id > 0) && (msr_id < 0x00001FFF)) || ((msr_id > 0xC0000000) && (msr_id < 0xC0001FFF)) || (msr_id > 0xC0010000) && (msr_id < 0xC0011FFF)))
+if (!(
+	((msr_id > 0) && (msr_id < 0x00001FFF)) || 
+	((msr_id > 0xC0000000) && (msr_id < 0xC0001FFF)) || 
+	(msr_id > 0xC0010000) && (msr_id < 0xC0011FFF)
+	))
 {
 	/*  PUBG and Fortnite's unimplemented MSR checks    */
 
@@ -204,41 +205,17 @@ if (!(((msr_id > 0) && (msr_id < 0x00001FFF)) || ((msr_id > 0xC0000000) && (msr_
 
 ### Setting up nested paging
 
-Nested paging/AMD RVI adds a second layer of paging that translates guest physical addresses to host physical addresses. Many cool tricks can be done using nested paging.
+Nested paging/AMD RVI adds a second layer of paging that translates guest physical addresses to host physical addresses. Many cool tricks can be done using nested paging. Address translations created by ForteVisor convert guest physical addresses into identical host physical addresses.
 
-I'm identity mapping guest physical addresses are 1:1 mapped to host physical addresses
+Here's the steps to set up a nested paging directory:
 
- After obtaining the system physical memory ranges with MmGetPhysicalMemoryRanges, the bits of each physical page is used as indices into the nested page tables. If a nested page table entry corresponding to the guest physical address does not exist, a new table is allocated, and the guest physical address is
+1. Obtain the system physical memory ranges with MmGetPhysicalMemoryRanges. 
+2. Allocate a page for npml4/nCR3
+3. For each system physical page, do a page walk into the npml4, using the bits of the physical page address as indicies into the nested page tables. For each nested paging level, we check the target NPT entry's present bit. If present, we allocate a new table; otherwise, we use the existing table pointed to by the nPTE PFN.
+4. At the final level, set nPTE->PFN to the physical page address itself. Boom, we've created 1:1 guest physical->host physical translation
 
-### Processor consistency checks
+picture:
 
-According to the AMD manual, any of the following conditions will trigger an invalid guest state #VMEXIT: 
-
-• EFER.SVME is zero.
-• CR0.CD is zero and CR0.NW is set.
-• CR0[63:32] are not zero.
-• Any MBZ bit of CR3 is set.
-• Any MBZ bit of CR4 is set.
-• DR6[63:32] are not zero.
-• DR7[63:32] are not zero.
-• Any MBZ bit of EFER is set.
-• EFER.LMA or EFER.LME is non-zero and this processor does not support long mode.
-• EFER.LME and CR0.PG are both set and CR4.PAE is zero.
-• EFER.LME and CR0.PG are both non-zero and CR0.PE is zero.
-• EFER.LME, CR0.PG, CR4.PAE, CS.L, and CS.D are all non-zero.
-• The VMRUN intercept bit is clear.
-• The MSR or IOIO intercept tables extend to a physical address that is greater than or equal to the
-maximum supported physical address.
-• Illegal event injection (Section 15.20).
-• ASID is equal to zero.
-• Any reserved bit is set in S_CET
-• CR4.CET=1 when CR0.WP=0
-• CR4.CET=1 and U_CET.SS=1 when EFLAGS.VM=1
-• Any reserved bit set in U_CET (SEV_ES only):
-	- VMRUN results in VMEXIT(INVALID)
-	- VMEXIT forces reserved bits to 0
-
-I 
 
 ### vmmcall interface
 
@@ -258,11 +235,49 @@ enum VMMCALL_ID : uintptr_t
 };
 ```
 
-Wrapper functions for vmmcall communication with the hypervisor are provided by fortevisor-api.lib. You can use it by including forte api.h and the static library in your project.
+Wrapper functions for the vmmcall interface are provided by fortevisor-api.lib. You can use it by including forte api.h and the static library in your project.
 
-## VM launch and VM exit operation
+### VM launch and VM exit operation
+
+The final step of preparing for SVM operation is executing vmload to load hidden guest state information. The vmrun instruction launches the hypervisor, stops host state execution, and loads the guest context from VMCB.
+
+```asm
+; omitted
+EnterVm:
+	mov	rax, [rsp]	; put physical address of guest VMCB in rax
+
+	vmload rax		; vmload hidden guest state
+
+	; int 3
+	
+	vmrun rax		; virtualize this processor (execution will pause here)
+
+	vmsave rax		; vmexit! save hidden state
+
+	PUSHAQ			; save all guest general registers
+
+	mov rcx, [rsp + 8 * 16 + 2 * 8]		; pass virtual processor data ptr in arg 1
+	mov rdx, rsp					    ; pass guest registers in arg 2
+
+	; omitted code...
+
+	call HandleVmexit	; vmexit handler
+```
+
+Once a #VMEXIT occurs, line 
 
 
+When we end the VM operation, we just disable SVM
+and jump to the guest context
+
+1. load guest state
+2. disable IF
+3. enable GIF
+4. disable SVME
+5. restore EFLAGS and re enable IF
+6. set RBX to RIP
+7. set RCX to RSP
+8. return and jump back to RBX
 
 ## Features
 
