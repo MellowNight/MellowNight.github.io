@@ -17,6 +17,8 @@ To start off, I tried to load my hypervisor with KDMapper but I got some mysteri
 
 Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from within kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, so that my hypervisor host can be safely mapped into the page tables of the system process, which never exits.  
 
+
+
 ### Checking for AMD-V support 
 
 Before any VM initialization, three conditions must be met:
@@ -121,29 +123,42 @@ void EnableSvme()
 
 ### Setting up the VMCB
 
-The Virtual Machine Control Block (VMCB) contains all the information used by the processor for hypervisor. Most of the registers in the guest VMCB are initialized with host values. The control area is loaded with host cr3. The save state area is loaded with the host RFLAGS, segment descriptors, and 
+The Virtual Machine Control Block (VMCB) contains core-specific information about the AMD virtual machine's state. It is split into two parts: the save state area and the control area.
+
+The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. I simply copied host register values to the save state area.
 
 
 
-### Setting up MSR intercepts
 
-I configured the MSR permissions map to only exit on reads and writes to the EFER msr. SVM status can be hidden by setting the EFER.svme bit in rax to 0, after handling the read from the EFER MSR. EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever an MSR outside of the MSR ranges specified in the manual is written to. 
 
+
+### MSR intercepts
+
+ForteVisor only intercepts reads and writes to the EFER msr. The EFER.svme bit indicates that AMD SVM is enabled, so it's necessary to spoof it to zero to hide the hypervisor. 
+
+EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever the guest attempts to write to an MSR outside of the ranges specified in the manual.
+
+*Look into the manual to see the MSR permission map format lol*
+```
+size_t bits_per_msr = 16000 / 8000;
+size_t bits_per_byte = sizeof(char) * 8;
+size_t msrpm_size = PAGE_SIZE * 2;
+
+// ...
+
+auto section2_offset = ();
+
+auto efer_offset = section2_offset + (bits_per_msr * (MSR::EFER - 0xC0000000));
+
+/*	intercept EFER read and write	*/
+
+RtlSetBits(&bitmap, efer_offset, 2);
+```
+
+*Spoofing EFER.SVME to 0*
 ```
 void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 {
-    uint32_t msr_id = guest_regs->rcx & (uint32_t)0xFFFFFFFF;
-
-    if (!(((msr_id > 0) && (msr_id < 0x00001FFF)) || ((msr_id > 0xC0000000) && (msr_id < 0xC0001FFF)) || (msr_id > 0xC0010000) && (msr_id < 0xC0011FFF)))
-    {
-        /*  PUBG and Fortnite's unimplemented MSR checks    */
-
-        InjectException(core_data, EXCEPTION_GP_FAULT, true, 0);
-        core_data->guest_vmcb.save_state_area.Rip = core_data->guest_vmcb.control_area.NRip;
-
-        return;
-    }
-
     LARGE_INTEGER   msr_value{ msr_value.QuadPart = __readmsr(msr_id) };
 
     switch (msr_id)
@@ -163,14 +178,29 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 
     core_data->guest_vmcb.save_state_area.Rax = msr_value.LowPart;
     guest_regs->rdx = msr_value.HighPart;
-
-    core_data->guest_vmcb.save_state_area.Rip = core_data->guest_vmcb.control_area.NRip;
 }
+```
+
+*Preventing unimplemented MSR access*
+```
+// ...
+uint32_t msr_id = guest_regs->rcx & (uint32_t)0xFFFFFFFF;
+
+if (!(((msr_id > 0) && (msr_id < 0x00001FFF)) || ((msr_id > 0xC0000000) && (msr_id < 0xC0001FFF)) || (msr_id > 0xC0010000) && (msr_id < 0xC0011FFF)))
+{
+	/*  PUBG and Fortnite's unimplemented MSR checks    */
+
+	InjectException(core_data, EXCEPTION_GP_FAULT, true, 0);
+	core_data->guest_vmcb.save_state_area.Rip = core_data->guest_vmcb.control_area.NRip;
+
+	return;
+}
+// ...
 ```
 
 ### Setting up nested paging
 
-Nested paging/AMD RVI is a feature that adds a second layer of paging that translates guest physical addresses to host physical addresses. Many cool tricks can be done using nested paging.
+Nested paging/AMD RVI adds a second layer of paging that translates guest physical addresses to host physical addresses. Many cool tricks can be done using nested paging.
 
 I'm identity mapping guest physical addresses are 1:1 mapped to host physical addresses
 
