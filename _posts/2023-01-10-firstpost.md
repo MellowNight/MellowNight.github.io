@@ -11,37 +11,117 @@ I will outline the implementation details of my AMD hypervisor, and explain some
 
 ## Virtual machine setup
 
-
 ### Loading the HV driver
 
 To start off, I tried to load my hypervisor with KDMapper but I got some mysterious crashes. The crash dump was corrupted, so it didn't give me any helpful information. Why didn't I crash when using OSRLoader?
 
-Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from inside kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, so that my hypervisor host can be safely mapped into the page tables of the system process, which never exits.  
+Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from within kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, so that my hypervisor host can be safely mapped into the page tables of the system process, which never exits.  
 
 ### Checking for AMD-V support 
 
 Before any VM initialization, three conditions must be met:
 
 1. AMD SVM must be supported.
-2. Virtualization must be enabled in BIOS.
-3. The SR_EFER.svme bit is set, after conditions #1 and #2 are met.
+2. Virtualization must be enabled in BIOS, so that VM_CR.SVMDIS can be set to 0 and VM_CR.LOCK can be locked.
+3. The MSR_EFER.svme bit is set, after conditions #1 and #2 are met.
 
+*First, we check if AMD SVM is supported*
+```
+enum CPUID
+{    
+    vendor_and_max_standard_fn_number = 0x0,
+    feature_identifier = 0x80000001,
+};
 
+bool IsSvmSupported()
+{
+	int32_t	cpu_info[4] = { 0 };
+
+	__cpuid(cpu_info, CPUID::feature_identifier);
+
+    /*  1. check if SVM is supported with CPUID Fn8000_0001_ECX */
+
+	if ((cpu_info[2] & (1 << 2)) == 0)
+	{
+		return false;
+	}
+
+	int32_t vendor_name_result[4];
+
+	char vendor_name[13];
+
+	__cpuid(vendor_name_result, CPUID::vendor_and_max_standard_fn_number);
+	memcpy(vendor_name, &vendor_name_result[1], sizeof(int));
+	memcpy(vendor_name + 4, &vendor_name_result[3], sizeof(int));
+	memcpy(vendor_name + 8, &vendor_name_result[2], sizeof(int));
+
+	vendor_name[12] = '\0';
+
+	DbgPrint("[SETUP] Vendor Name %s \n", vendor_name);
+
+    /*  2. check if we are running on an AMD processor or inside a VMWare guest by 
+        querying the  CPUID Fn0000_0000_E[D,C,B]X value
+    */
+
+	if (strcmp(vendor_name, "AuthenticAMD") && strcmp(vendor_name, "VmwareVmware"))
+	{
+		return false;
+	}
+
+	return true;
+}
 ```
 
-int32_t	cpu_info[4] = { 0 };
+*The VM_CR.LOCK bit will be locked to 1 if virtualization is disabled in BIOS, preventing you from changing the value of VM_CR.SVMDIS. If VM_CR.LOCK is already locked and VM_CR.SVMDIS is 1, then abort initialization. Otherwise, clear VM_CR.SVMDIS and set VM_CR.LOCK*
 
-__cpuid(cpu_info, CPUID::processor_feature_identifier);
-
-if ((cpu_info[2] & (1 << 1)) == 0)
+```
+enum MSR : UINT64
 {
-    return false;
+    VM_CR = 0xC0010114,
+};
+
+bool IsSvmUnlocked()
+{
+	MsrVmcr	msr;
+
+	msr.flags = __readmsr(MSR::VM_CR);
+
+    /*  Check if V*/
+
+	if (msr.svm_lock == 0)
+	{
+		msr.svme_disable = 0;   // 4
+		msr.svm_lock = 1;       // 3
+		__writemsr(MSR::VM_CR, msr.flags);
+	}
+	else if (msr.svme_disable == 1)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+*Finally, we can enable AMD SVM extensions for this core*
+
+```
+enum MSR : UINT64
+{ 
+    EFER = 0xC0000080,
+};
+
+void EnableSvme()
+{
+	MsrEfer	msr;
+	msr.flags = __readmsr(MSR::EFER);
+	msr.svme = 1;
+	__writemsr(MSR::EFER, msr.flags);
 }
 ```
 
 ### Setting up the VMCB
 
-Most of the registers in the guest VMCB are initialized with host values. The control area is loaded with host cr3. The save state area is loaded with the host RFLAGS, segment descriptors, and 
+The Virtual Machine Control Block (VMCB) contains all the information used by the processor for hypervisor. Most of the registers in the guest VMCB are initialized with host values. The control area is loaded with host cr3. The save state area is loaded with the host RFLAGS, segment descriptors, and 
 
 
 
