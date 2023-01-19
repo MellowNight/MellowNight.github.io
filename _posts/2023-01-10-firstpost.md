@@ -182,7 +182,9 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 ```
 
 *Preventing unimplemented MSR access*
-```
+
+<div style="background-color: rgb(50, 50, 50);">
+```cpp
 // ...
 uint32_t msr_id = guest_regs->rcx & (uint32_t)0xFFFFFFFF;
 
@@ -197,6 +199,9 @@ if (!(((msr_id > 0) && (msr_id < 0x00001FFF)) || ((msr_id > 0xC0000000) && (msr_
 }
 // ...
 ```
+</div>
+
+
 
 ### Setting up nested paging
 
