@@ -2,7 +2,6 @@
 layout: post
 title: "How ForteVisor works under the hood"
 date: 2023-01-19 01:01:01 -0000
-categories: CATEGORY-1 CATEGORY-2
 ---
 
 ## Introduction
