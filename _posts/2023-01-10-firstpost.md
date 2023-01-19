@@ -241,7 +241,7 @@ Wrapper functions for the vmmcall interface are provided by fortevisor-api.lib. 
 
 The final step of preparing for SVM operation is executing vmload to load hidden guest state information. The vmrun instruction launches the hypervisor, stops host state execution, and loads the guest context from VMCB.
 
-```asm
+```cpp
 ; omitted
 EnterVm:
 	mov	rax, [rsp]	; put physical address of guest VMCB in rax
@@ -289,15 +289,24 @@ Intel supports execute-only pages through extended page tables, so developers ca
 
 AMD nested page tables do not support execute-only pages, so AMD system programmers need to consider two potential workarounds to achieve execute only pages:
 
-    1. SEV-ES guests can support eexecute-only
+    1. SEV-ES guests can support execute-only
     2. Page protection keys
     
-Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I had to figure out a way to hide hooks without execute-only pages. I created two completely seperate ncr3 direcories: one with every single trapping on execute 
+Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I had to figure out a way to hide hooks without execute-only pages.
+
+I created two seperate ncr3 direcories: an "hooked" ncr3 with every nPTE set to read/write only, and a "innocent" ncr3 with every nPTE allowing read/write/execute permissions. 
+
+Let's say I wanted to place an hidden hook on a page with SetNptHook() (link to setnpthook):
+
+1. memcpy on the page
+2. 
 
 
+KVA shadowing caused a problem for me, as admin programs didn't have 
+
+binary sort and search
 
 ### Sandboxing 
-
 
 
 ### Read Write logging

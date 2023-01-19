@@ -94,22 +94,21 @@ code, pre {
 }
 
 pre {
-  padding:8px 15px;
+  padding: 5px 5px;
   background: var(--clr-code-bg);
-  border-radius:5px;
-  border:1px solid var(--clr-code-border);
+  border-radius: 2px;
+  border: 1px solid var(--clr-code-border);
   overflow-x: auto;
 }
-
 table {
   width:100%;
   border-collapse:collapse;
 }
 
 th, td {
-  text-align:left;
-  padding:5px 10px;
-  border-bottom:1px solid var(--clr-splitter-blockquote-and-section);
+  text-align: left;
+  padding: 1px 1px 0px;
+  border-bottom: 0px solid var(--clr-splitter-blockquote-and-section);
 }
 
 dt {
