@@ -212,20 +212,27 @@ According to the AMD manual,
 
 ### vmmcall interface
 
-The guest can invoke functionality in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the identifier in RCX, one of the following operations is invoked:
+The guest can invoke functions in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the identifier in RCX, one of the following operations are executed:
 
 ```
+enum VMMCALL_ID : uintptr_t
+{
+    disable_hv = 0x11111111,
+    set_npt_hook = 0x11111112,
+    remove_npt_hook = 0x11111113,
+    is_hv_present = 0x11111114,
+    sandbox_page = 0x11111116,
+    register_instrumentation_hook = 0x11111117,
+    deny_sandbox_reads = 0x11111118,
+    start_branch_trace = 0x11111119,
+};
 ```
 
-I created the fortevisor-api.lib library to provide wrapper functions for communicating to the hypervisor via vmmcall.
-
-```
-
-
-
-```
+Wrapper functions for vmmcall communication with the hypervisor are provided by fortevisor-api.lib. You can use it by including forte api.h and the static library in your project.
 
 ## VM launch and VM exit operation
+
+
 
 ## Features
 
