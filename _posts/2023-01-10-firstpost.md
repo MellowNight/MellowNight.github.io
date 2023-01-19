@@ -96,7 +96,7 @@ bool IsSvmUnlocked()
 
 	return true;
 }
-
+```
 *Finally, we can enable AMD SVM extensions for this core*
 
 ```
