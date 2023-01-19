@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "How ForteVisor works under the hood"
-date: YYYY-MM-DD hh:mm:ss -0000
+date: 2023-01-19 01:01:01 -0000
 categories: CATEGORY-1 CATEGORY-2
 ---
 
@@ -267,8 +267,7 @@ EnterVm:
 Once a #VMEXIT occurs, line 
 
 
-When we end the VM operation, we just disable SVM
-and jump to the guest context
+To stop the virtual machine, we do the following:
 
 1. load guest state
 2. disable IF
@@ -277,7 +276,7 @@ and jump to the guest context
 5. restore EFLAGS and re enable IF
 6. set RBX to RIP
 7. set RCX to RSP
-8. return and jump back to RBX
+8. return and jump to RBX
 
 ## Features
 
