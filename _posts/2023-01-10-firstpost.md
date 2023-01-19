@@ -28,7 +28,7 @@ Before any VM initialization, three conditions must be met:
 3. The MSR_EFER.svme bit is set, after conditions #1 and #2 are met.
 
 *First, we check if AMD SVM is supported*
-```
+```cpp
 enum CPUID
 {    
     vendor_and_max_standard_fn_number = 0x0,
@@ -76,7 +76,7 @@ bool IsSvmSupported()
 
 *The VM_CR.LOCK bit will be locked to 1 if virtualization is disabled in BIOS, preventing you from changing the value of VM_CR.SVMDIS. If VM_CR.LOCK is already locked and VM_CR.SVMDIS is 1, then abort initialization. Otherwise, clear VM_CR.SVMDIS and set VM_CR.LOCK*
 
-```
+```cpp
 enum MSR : UINT64
 {
     VM_CR = 0xC0010114,
@@ -139,7 +139,7 @@ ForteVisor only intercepts reads and writes to the EFER msr. The EFER.svme bit i
 EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever the guest attempts to write to an MSR outside of the ranges specified in the manual.
 
 *Look into the manual to see the MSR permission map format lol*
-```
+```cpp
 size_t bits_per_msr = 16000 / 8000;
 size_t bits_per_byte = sizeof(char) * 8;
 size_t msrpm_size = PAGE_SIZE * 2;
@@ -156,7 +156,7 @@ RtlSetBits(&bitmap, efer_offset, 2);
 ```
 
 *Spoofing EFER.SVME to 0*
-```
+```cpp
 void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 {
     LARGE_INTEGER   msr_value{ msr_value.QuadPart = __readmsr(msr_id) };
@@ -183,7 +183,6 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 
 *Preventing unimplemented MSR access*
 
-<div style="background-color: rgb(50, 50, 50);">
 ```cpp
 // ...
 uint32_t msr_id = guest_regs->rcx & (uint32_t)0xFFFFFFFF;
@@ -199,8 +198,6 @@ if (!(((msr_id > 0) && (msr_id < 0x00001FFF)) || ((msr_id > 0xC0000000) && (msr_
 }
 // ...
 ```
-</div>
-
 
 
 ### Setting up nested paging
@@ -219,7 +216,7 @@ According to the AMD manual,
 
 The guest can invoke functions in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the identifier in RCX, one of the following operations are executed:
 
-```
+```cpp
 enum VMMCALL_ID : uintptr_t
 {
     disable_hv = 0x11111111,
