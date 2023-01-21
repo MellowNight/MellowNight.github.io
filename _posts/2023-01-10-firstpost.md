@@ -265,7 +265,6 @@ EnterVm:
 
 Once a #VMEXIT occurs, line 
 
-
 To stop the virtual machine, we do the following:
 
 1. load guest state
@@ -293,15 +292,23 @@ AMD nested page tables do not support execute-only pages, so AMD system programm
     
 Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I had to figure out a way to hide hooks without execute-only pages.
 
-I created two seperate ncr3 direcories: an "hooked" ncr3 with every nPTE set to read/write only, and a "innocent" ncr3 with every nPTE allowing read/write/execute permissions. 
+I created two seperate ncr3 direcories: an **"hooked"** ncr3 with every nPTE set to read/write only, and a **"innocent"** ncr3 with every nPTE allowing read/write/execute permissions. 
 
-Let's say I wanted to place an hidden hook on a page with SetNptHook() (link to setnpthook):
+These are the steps for setting [an NPT hook(link to setnpthook)] on AMD: 
 
-1. memcpy on the page
-2. 
+1. vmmcall to the HV exit handler with parameters
+2. __writecr3() to attach to the process cr3 saved in VMCB
+4. Make a NonPagedPool copy of the target page 
+5. Get the page offset of the hook and copy it to copied page + page offset.    
+6. Give rwx permissions to the nPTE of the copy page, in **"hooked"** ncr3
+7. Set the nPTE permissions of the original target page to rw-only in **"innocent"** (so that we can trap on executes) 
+8. Create an MDL to lock the target page's virtual address translation to its physical address and, consequently, the host physical address. OTHERWISE THE MMU WILL SWAP YOUR HOOKED PAGE WITH A COMPLETELY IRRELEVANT PAGE !!!
 
+One problem was caused by Windows' KVA shadowing feature, which created two page directories for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the usermode dirbase was saved in guest VMCB, and ForteVisor's code wasn't even mapped into the target usermode dirbase.
 
-KVA shadowing caused a problem for me, as admin programs didn't have 
+Any process interfacing with ForteVisor must run as administrator to prevent this crash!
+
+The RW faults and  of the NPT hook must also be handled and nested page . On #NPF vmexits, NPT
 
 binary sort and search
 
