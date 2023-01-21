@@ -18,7 +18,7 @@ To start off, I tried to load my hypervisor with KDMapper but I got some mysteri
 
 [WINDBG_PICTURE_HERE]
 
-Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from within kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
+The reason why it was crashing was because I was running all my initialization code from within kdmapper's process context, thus KDMapper's cr3 would be saved in guest VMCB. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
 
 
 ### Checking for AMD-V support 
@@ -133,6 +133,8 @@ The Virtual Machine Control Block (VMCB) contains core-specific information abou
 The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. Host register values are simply copied to the save state area in ForteVisor.
 
 picture here:
+![alt text](https://github.com/MellowNight/MellowNight.github.io/blob/main/assets/img/VMCB.jpeg "Logo Title Text 1")
+
 
 ### MSR intercepts
 
