@@ -16,8 +16,9 @@ I will outline the implementation details of my AMD hypervisor, and explain some
 
 To start off, I tried to load my hypervisor with KDMapper but I got some mysterious crashes. The crash dump was corrupted, so it didn't give me any helpful information. Why didn't I crash when using OSRLoader?
 
-Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from within kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, so that my hypervisor host can be mapped into the page tables of the system process, which never exits.  
+[WINDBG_PICTURE_HERE]
 
+Apparently, The reason why it was crashing was because I was running all my initialization code and setting up guest page tables from within kdmapper's process context. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
 
 
 ### Checking for AMD-V support 
@@ -75,6 +76,8 @@ bool IsSvmSupported()
 }
 ```
 
+
+
 *The VM_CR.LOCK bit will be locked to 1 if virtualization is disabled in BIOS, preventing you from changing the value of VM_CR.SVMDIS. If VM_CR.LOCK is already locked and VM_CR.SVMDIS is 1, then abort initialization. Otherwise, clear VM_CR.SVMDIS and set VM_CR.LOCK*
 
 ```cpp
@@ -105,8 +108,9 @@ bool IsSvmUnlocked()
 	return true;
 }
 ```
-*Finally, we can enable AMD SVM extensions for this core*
 
+
+*Finally, we can enable AMD SVM for this core*
 ```
 enum MSR : UINT64
 { 
@@ -204,7 +208,9 @@ if (!(
 
 ### Setting up nested paging
 
-Nested paging/AMD RVI adds a second layer of paging that translates guest physical addresses to host physical addresses. Many cool tricks can be done using nested paging. Address translations created by ForteVisor convert guest physical addresses into identical host physical addresses.
+Nested paging/AMD RVI adds a second layer of paging that translates guest physical addresses to host physical addresses. ForteVisor's nested page tables are setup with identity mapping to create 1:1 translations between guest and host physical addresses. 
+
+A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
 
 Here's the steps to set up a nested paging directory:
 
@@ -280,19 +286,20 @@ To stop the virtual machine, we do the following:
 
 ### Nested Page Table hooks
 
-The principle of EPT/NPT stealth hooking is based off of the ability to intercept certain forms of access to pages. Page permission based hooking techniques have been used for decades, from guard page hooking to nehalem TLB-split hooking. 
+The principle of EPT/NPT stealth hooking is based off of the ability to intercept memory accesses to pages. Page permission based hooking techniques have been used for decades, from guard page hooking to nehalem TLB-split hooking. 
 
-Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. The VMM can then handle an access violation caused by an attempted read from the page, change the EPT mapping to the hookless page, and set the EPT mapping to read/write only. This memory read trapping mechanism effectively hides byte patches from security systems such as patchguard and Battleye. The hooked copy of this page is restored once the VMM intercepts an attempted execute on the read/write only mapping of the page.
+Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can then handle an EPT fault caused by an attempted read from the page, point the EPT's pfn to the hookless page, and set the memory to read/write only. This memory read trapping mechanism effectively hides byte patches from security systems such as patchguard and Battleye. The hooked copy of this page is restored once the VMM intercepts an attempted execute on the read/write only mapping of the page.
 
 
-AMD nested page tables do not support execute-only pages, so AMD system programmers need to consider two potential workarounds to achieve execute only pages:
+AMD nested page tables do not support execute-only pages, so AMD system programmers would need to trap every execute access to the hook page, causing a lot of overhead. Two workarounds can be considered if you really want execute only pages:
 
-    1. SEV-ES guests can support execute-only
-    2. Page protection keys
+**SEV-SNP (secure nested paging):** guests can restrict pages to execute-only with VMPL permission masks in the RMP (reverse map table). These RMP permission checks are only in effect when SEV-SNP is enabled. See AMD system programming manual sections 15.36.3 to 15.36.5 for more info.  
+
+**Memory Protection Keys:** 
     
-Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I had to figure out a way to hide hooks without execute-only pages.
+Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I needed to somehow hide my hooks by trapping executes on pages.
 
-I created two seperate ncr3 direcories: an **"hooked"** ncr3 with every nPTE set to read/write only, and a **"innocent"** ncr3 with every nPTE allowing read/write/execute permissions. 
+To start off, I set up two ncr3 direcories: an **"hooked"** ncr3 with every nPTE set to read/write only, and a **"innocent"** ncr3 with every nPTE allowing read/write/execute permissions. 
 
 These are the steps for setting [an NPT hook(link to setnpthook)] on AMD: 
 
@@ -308,7 +315,11 @@ One problem was caused by Windows' KVA shadowing feature, which created two page
 
 Any process interfacing with ForteVisor must run as administrator to prevent this crash!
 
-The RW faults and  of the NPT hook must also be handled and nested page . On #NPF vmexits, NPT
+After setting the hook, the hooked page will throw #NPF violations on execute, and the vmexit handler will take these steps to handle it:
+1. 
+2.
+3.
+4.
 
 binary sort and search
 
