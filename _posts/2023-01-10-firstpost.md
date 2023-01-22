@@ -92,12 +92,12 @@ bool IsSvmUnlocked()
 
 	msr.flags = __readmsr(MSR::VM_CR);
 
-    /*  Check if V*/
+    /*  Check if SVM is locked	*/
 
-	if (msr.svm_lock == 0)
+	if (msr.svm_lock == 0)		// bit 3
 	{
-		msr.svme_disable = 0;   // 4
-		msr.svm_lock = 1;       // 3
+		msr.svme_disable = 0;   // bit 4
+		msr.svm_lock = 1;       
 		__writemsr(MSR::VM_CR, msr.flags);
 	}
 	else if (msr.svme_disable == 1)
@@ -167,17 +167,12 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 
     switch (msr_id)
     {
-    case MSR::EFER:
-    {
-        auto efer = (MsrEfer*)&msr_value.QuadPart;
-
-        Logger::Get()->Log("MSR::EFER caught, msr_value.QuadPart = %p \n", msr_value.QuadPart);
-
-        efer->svme = 0;
-        break;
-    }
-    default:
-        break;
+		case MSR::EFER:
+		{
+			auto efer = (MsrEfer*)&msr_value.QuadPart;
+			efer->svme = 0;
+			break;
+		}
     }
 
     core_data->guest_vmcb.save_state_area.Rax = msr_value.LowPart;
@@ -200,8 +195,6 @@ if (!(
 	/*  PUBG and Fortnite's unimplemented MSR checks    */
 
 	InjectException(core_data, EXCEPTION_GP_FAULT, true, 0);
-	core_data->guest_vmcb.save_state_area.Rip = core_data->guest_vmcb.control_area.NRip;
-
 	return;
 }
 // ...
@@ -214,14 +207,15 @@ Nested paging/AMD RVI adds a second layer of paging that translates guest physic
 
 A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
 
-Here's the steps to set up a nested paging directory:
+Here's the steps to set up an identity mapped nested paging directory:
 
 1. Obtain the system physical memory ranges with MmGetPhysicalMemoryRanges. 
 2. Allocate a page for npml4/nCR3
 3. For each system physical page, do a page walk into the npml4, using the bits of the physical page address as indicies into the nested page tables. For each nested paging level, we check the target NPT entry's present bit. If present, we allocate a new table; otherwise, we use the existing table pointed to by the nPTE PFN.
-4. At the final level, set nPTE->PFN to the physical page address itself. Boom, we've created 1:1 guest physical->host physical translation
+4. At the final level, set nPTE->PFN to the guest page frame itself. Boom, we've created 1:1 guest->host physical address translation
 
 picture:
+
 
 
 ### vmmcall interface
@@ -290,7 +284,11 @@ To stop the virtual machine, we do the following:
 
 The principle of EPT/NPT stealth hooking is based off of the ability to intercept memory accesses to pages. Page permission based hooking techniques have been used for decades, from guard page hooking to nehalem TLB-split hooking. 
 
-Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can then handle an EPT fault caused by an attempted read from the page, point the EPT's pfn to the hookless page, and set the memory to read/write only. This memory read trapping mechanism effectively hides byte patches from security systems such as patchguard and Battleye. The hooked copy of this page is restored once the VMM intercepts an attempted execute on the read/write only mapping of the page.
+Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can then handle an EPT fault caused by an attempted read from the page, point the EPT's pfn to the hookless page, and set the memory to read/write only. This memory read trapping mechanism effectively hides byte patches from security systems such as patchguard and Battleye. The hooked copy of this page is restored 
+once the VMM intercepts an attempted execute on the read/write only mapping of the page.
+
+
+[Intel EPT hook diagram here]
 
 
 AMD nested page tables do not support execute-only pages, so AMD system programmers would need to trap every execute access to the hook page, causing a lot of overhead. Two workarounds can be considered if you really want execute only pages:
@@ -301,29 +299,50 @@ AMD nested page tables do not support execute-only pages, so AMD system programm
     
 Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I needed to somehow hide my hooks by trapping executes on pages.
 
-To start off, I set up two ncr3 direcories: an **"hooked"** ncr3 with every nPTE set to read/write only, and a **"innocent"** ncr3 with every nPTE allowing read/write/execute permissions. 
+To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"innocent"** ncr3 with every page allowing read/write/execute permissions. The idea is to switch to **"shadow"** ncr3 whenever we execute the hooked page, and switch back to **"innocent"** ncr3 whenever RIP executes outside the hooked page.
 
 These are the steps for setting [an NPT hook(link to setnpthook)] on AMD: 
 
-1. vmmcall to the HV exit handler with parameters
-2. __writecr3() to attach to the process cr3 saved in VMCB
-4. Make a NonPagedPool copy of the target page 
-5. Get the page offset of the hook and copy it to copied page + page offset.    
-6. Give rwx permissions to the nPTE of the copy page, in **"hooked"** ncr3
-7. Set the nPTE permissions of the original target page to rw-only in **"innocent"** (so that we can trap on executes) 
-8. Create an MDL to lock the target page's virtual address translation to its physical address and, consequently, the host physical address. OTHERWISE THE MMU WILL SWAP YOUR HOOKED PAGE WITH A COMPLETELY IRRELEVANT PAGE !!!
+1. __writecr3() to attach to the process cr3 saved in VMCB
+2. Make a NonPagedPool copy of the target page 
+3. copy the hook shellcode to copied page + hook page offset.    
+4. Give rwx permissions to the nPTE of the copy page, in **"shadow"** ncr3
+5. Set the nPTE permissions of the original target page to rw-only in **"innocent"** (so that we can trap on executes) 
+6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
 
-One problem was caused by Windows' KVA shadowing feature, which created two page directories for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the usermode dirbase was saved in guest VMCB, and ForteVisor's code wasn't even mapped into the target usermode dirbase.
+[AMD NPT hook diagram here, WITH STEPS!!!]
+
+One problem was caused by Windows' KVA shadowing feature, which created two page directories for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where ForteVisor's code wasn't even mapped.
 
 Any process interfacing with ForteVisor must run as administrator to prevent this crash!
 
-After setting the hook, the hooked page will throw #NPF violations on execute, and the vmexit handler will take these steps to handle it:
-1. 
-2.
-3.
-4.
+After setting the NPT hook, the hooked page will throw #NPF on execute. The pseudocode for handling #NPF vmexits from hooked pages is as follows: 
 
-binary sort and search
+```
+faulting_shadow_npte = GetPte(faulting_guest_physical, ncr3_directories[shadow])
+
+bool switch_ncr3
+
+// instructions split across page boundary will cause infinite #NPF loop
+
+if page_align(faulting_guest_physical + 10) != page_align(faulting_guest_physical):
+	switch_ncr3 = false
+else
+	switch_ncr3 = true
+
+// if the faulting physical address is executable in shadow nCR3 context,
+// then we are entering the shadow context
+// otherwise, we are entering the innocent nCR3 context
+
+if switch_ncr3 == true:
+	if faulting_shadow_npte.execute_disable == false:
+		vmcb.control_area.ncr3 = ncr3_directories[shadow]
+	else:
+		vmcb.control_area.ncr3 = ncr3_directories[innocent]
+```
+
+*How #NPF faults are handled:*
+
 
 ### Sandboxing 
 
