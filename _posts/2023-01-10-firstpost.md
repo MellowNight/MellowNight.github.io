@@ -301,24 +301,26 @@ AMD nested page tables do not support execute-only pages, so AMD system programm
     
 Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I needed to somehow hide my hooks by trapping executes on pages.
 
-To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"innocent"** ncr3 with every page allowing read/write/execute permissions. The idea is to switch to **"shadow"** ncr3 whenever we execute the hooked page, and switch back to **"innocent"** ncr3 whenever RIP executes outside the hooked page.
+To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Whenever we execute the hooked page, #NPF is thrown and we enter into the **"shadow"** ncr3. The processor switches back to **"primary"** ncr3 whenever RIP goes outside of the hooked page.
 
-These are the steps for setting [an NPT hook(link to setnpthook)] on AMD: 
+*This how [an NPT hook(link to setnpthook)]is set up:*
 
 1. __writecr3() to attach to the process cr3 saved in VMCB
 2. Make a NonPagedPool copy of the target page 
 3. copy the hook shellcode to copied page + hook page offset.    
 4. Give rwx permissions to the nPTE of the copy page, in **"shadow"** ncr3
-5. Set the nPTE permissions of the original target page to rw-only in **"innocent"** (so that we can trap on executes) 
+5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
 
-[AMD NPT hook diagram here, WITH STEPS!!!]
+**[AMD NPT hook diagram here, WITH STEPS!!!]**
 
 One problem was caused by Windows' KVA shadowing feature, which created two page directories for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where ForteVisor's code wasn't even mapped.
 
 Any process interfacing with ForteVisor must run as administrator to prevent this crash!
 
-After setting the NPT hook, the hooked page will throw #NPF on execute. The pseudocode for handling #NPF vmexits from hooked pages is as follows: 
+After setting the NPT hook, the hooked page will trigger #NPF vmexit on execute. This is how the #NPF is handled:
+
+**[AMD NPT hook diagram here, WITH STEPS!!!]**
 
 ```
 faulting_shadow_npte = GetPte(faulting_guest_physical, ncr3_directories[shadow])
@@ -334,22 +336,33 @@ else
 
 // if the faulting physical address is executable in shadow nCR3 context,
 // then we are entering the shadow context
-// otherwise, we are entering the innocent nCR3 context
+// otherwise, we are entering the primary nCR3 context
 
 if switch_ncr3 == true:
 	if faulting_shadow_npte.execute_disable == false:
 		vmcb.control_area.ncr3 = ncr3_directories[shadow]
 	else:
-		vmcb.control_area.ncr3 = ncr3_directories[innocent]
+		vmcb.control_area.ncr3 = ncr3_directories[primary]
 ```
 
-*How #NPF faults are handled:*
+**When two adjacent pages have conflicting execute permissions, an #NPF might occur from an instruction split across the page boundary. This will cause an infinite #NPF loop, so you must figure out how to execute the entire instruction safely. I spent 24+ days debugging this!!*
 
 
 ### Sandboxing 
 
+We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and control read, write, and execute access coming from the region. This serves as the basis for some current EDR, software containerization, or reverse engineering/dynamic analysis solutions. KVM's EPT/NPT capability is used by Intel Kata and Docker Desktop to isolate containers. The concept behind ForteVisor's NPT sandbox is similar to Bromium's LAVA tool. 
 
-### Read Write logging
+ForteVisor's sandboxing feature switches nCR3 context in the same way as NPT hooking, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3. We can use this to log the APIs called or memory accessed by DLLs. 
+
+#### intercepting execution that leaves the sandbox
+
+Whenever the RIP executes outside of a sandboxed memory region, the vmexit handler simply saves registers and sets guest RIP to an instrumentation callback registered by the user. The user can manipulate the registers and log data from inside this callback. 
+
+
+#### logging out- of sandbox reads
+
+I didn't figure out how to properly log reads and writes, because guest page table walks involved reading and writing. I can only log reads and writes by denying access to specific pages
+
 
 ### Branch Tracing
 
