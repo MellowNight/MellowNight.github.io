@@ -203,18 +203,20 @@ if (!(
 
 ### Setting up nested paging
 
-Nested paging/AMD RVI adds a second layer of paging that translates guest physical addresses to host physical addresses. ForteVisor's nested page tables are setup with identity mapping to create 1:1 translations between guest and host physical addresses. 
+Nested paging/AMD RVI adds a second layer of paging that translates gPA (guest physical address) to hPA (host physical address). gPA are identity mapped to hPA with ForteVisor's nested page table setup.
 
 A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
 
-Here's the steps to set up an identity mapped nested paging directory:
+Here's the steps to set up an nested paging directory for identity mapping:
 
-1. Obtain the system physical memory ranges with MmGetPhysicalMemoryRanges. 
+1. Obtain physical memory ranges with MmGetPhysicalMemoryRanges. 
 2. Allocate a page for npml4/nCR3
-3. For each system physical page, do a page walk into the npml4, using the bits of the physical page address as indicies into the nested page tables. For each nested paging level, we check the target NPT entry's present bit. If present, we allocate a new table; otherwise, we use the existing table pointed to by the nPTE PFN.
-4. At the final level, set nPTE->PFN to the guest page frame itself. Boom, we've created 1:1 guest->host physical address translation
+3. Do a page walk into the nCR3 directory using each physical page address. For each nested paging level, we check the indexed NPT entry's present bit. If present == 0, we use the existing table pointed to by NPT entry's PFN; otherwise, we allocate a new table for the PFN
+4. At the last level, point nPTE->PFN to the physical page address itself. Boom, we've created 1:1 gPA->hPA mapping for a page
 
-picture:
+*This is basically the same concept as normal virtual->physical paging lol*
+
+
 
 
 
