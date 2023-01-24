@@ -1,16 +1,15 @@
 ---
 layout: post
-title: "How ForteVisor works under the hood"
+title: "How AetherVisor works under the hood"
 date: 2023-01-19 01:01:01 -0000
 ---
 
 ## Introduction
 
-A while ago, I wrote a type-2 AMD hypervisor to dynamically analyze anti-cheats and hide internal cheats. I no longer want to treat protected software as a black box, which is why I stopped working on this project to study other topics such as deobfuscation. This is by no means a mature hypervisor that intercepts every special guest instruction. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, ForteVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
+A while ago, I wrote a type-2 AMD hypervisor to dynamically analyze anti-cheats and hide internal cheats. I no longer want to treat protected software as a black box, which is why I stopped working on this project to study other topics such as deobfuscation. This is by no means a mature hypervisor that intercepts every special guest instruction. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, AetherVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
 
 
-I will outline the implementation details of my AMD hypervisor, and explain some potential issues throughout the process. 
-
+This is an general overview of AetherVisor's implementation, with descriptions of some potential issues.
 
 ## Virtual machine setup
 
@@ -139,7 +138,7 @@ void EnableSvme()
 The Virtual Machine Control Block (VMCB) contains core-specific information about the AMD virtual machine's state. It is split into two parts: the save state area and the control area.
 
 
-The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. Host register values are simply copied to the save state area in ForteVisor.
+The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. Host register values are simply copied to the save state area in AetherVisor.
 
 
 picture here:
@@ -150,7 +149,7 @@ picture here:
 ### MSR intercepts
 
 
-ForteVisor only intercepts reads and writes to the EFER msr. The EFER.svme bit indicates that AMD SVM is enabled, so it's necessary to spoof it to zero to hide the hypervisor. 
+AetherVisor only intercepts reads and writes to the EFER msr. The EFER.svme bit indicates that AMD SVM is enabled, so it's necessary to spoof it to zero to hide the hypervisor. 
 
 
 EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever the guest attempts to write to an MSR outside of the ranges specified in the manual.
@@ -220,7 +219,7 @@ if (!(
 ### Setting up nested paging
 
 
-Nested paging/AMD RVI adds a second layer of paging that translates gPA (guest physical address) to hPA (host physical address). gPA are identity mapped to hPA with ForteVisor's nested page table setup.
+Nested paging/AMD RVI adds a second layer of paging that translates gPA (guest physical address) to hPA (host physical address). gPA are identity mapped to hPA with AetherVisor's nested page table setup.
 
 
 A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
@@ -262,7 +261,7 @@ enum VMMCALL_ID : uintptr_t
 ```
 
 
-Wrapper functions for the vmmcall interface are provided by fortevisor-api.lib. You can use it by including forte api.h and the static library in your project.
+Wrapper functions for the vmmcall interface are provided by Aethervisor-api.lib. You can use it by including Aether api.h and the static library in your project.
 
 
 ### VM launch and VM exit operation
@@ -343,7 +342,7 @@ To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page 
 
 
 *This how [an NPT hook(link to setnpthook)]is set up:*
-
+**[AMD NPT hook diagram here, WITH STEPS!!!]**
 
 1. __writecr3() to attach to the process cr3 saved in VMCB
 2. Make a NonPagedPool copy of the target page 
@@ -352,14 +351,10 @@ To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page 
 5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
 
-
-**[AMD NPT hook diagram here, WITH STEPS!!!]**
-
-
-One problem was caused by Windows' KVA shadowing feature, which created two page directories for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where ForteVisor's code wasn't even mapped.
+One problem was caused by Windows' KVA shadowing feature, which created two page directories for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where AetherVisor's code wasn't even mapped.
 
 
-Any process interfacing with ForteVisor must run as administrator to prevent this crash!
+Any process interfacing with AetherVisor must run as administrator to prevent this crash!
 
 
 After setting the NPT hook, the hooked page will trigger #NPF vmexit on execute. This is how the #NPF is handled:
@@ -397,13 +392,13 @@ if switch_ncr3 == true:
 ### Sandboxing 
 
 
-We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and control read, write, and execute access coming from the region. This serves as the basis for some current EDR, software containerization, or reverse engineering/dynamic analysis solutions. KVM's EPT/NPT capability is used by Intel Kata and Docker Desktop to isolate containers. The concept behind ForteVisor's NPT sandbox is similar to Bromium's LAVA tool. 
+We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and control read, write, and execute access coming from the region. This serves as the basis for some current EDR, software containerization, or reverse engineering/dynamic analysis solutions. KVM's EPT/NPT capability is used by Intel Kata and Docker Desktop to isolate containers. The concept behind AetherVisor's NPT sandbox is similar to Bromium's LAVA tool. 
 
 
 #### intercepting out-of-module execution
 
 
-ForteVisor's sandboxing feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3. Whenever RIP leaves a sandbox region, the following events occur:
+AetherVisor's sandboxing feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3. Whenever RIP leaves a sandbox region, the following events occur:
 
 
 1. #NPF is thrown
@@ -433,7 +428,7 @@ I didn't figure out how to log every single memory read and write, because guest
 7. guest execution resumes at the callback, in **"Primary"** context
 
 
-#### ForteVisor sandbox vs. other tools
+#### AetherVisor sandbox vs. other tools
 
 
 Other projects utilize other methods to achieve the same goal of dynamically analyzing a program in a sandbox:
@@ -444,28 +439,20 @@ Other projects utilize other methods to achieve the same goal of dynamically ana
 - **Simpleator:** Uses Hyper-V API to create an isolated guest address space, and logs Winapi calls
 
 
-ForteVisor's advantage is that programs don't have to be emulated from the start, and a fabricated system environment doesn't need to be set up. Programs can be sandboxed on-the-fly, allowing you to analyze highly complex software.
+AetherVisor's advantage is that programs don't have to be emulated from the start, and a fabricated system environment doesn't need to be set up. Programs can be sandboxed on-the-fly, allowing you to analyze highly complex software.
 
 
 ### Branch Tracing
 
-The branch tracing feature in ForteVisor uses a combination of Last Branch Record (LBR) and Branch Trap Flag (BTF), to notify the VMM whenever a branch is executed.
+The branch tracing feature in AetherVisor uses a combination of Last Branch Record (LBR) and Branch Trap Flag (BTF), to notify the VMM whenever a branch is executed.
 
 The problem with my implementation is that #DB is thrown on every branch, causing a lot of overhead. I thought of collecting branch information in the LBR stack instead of single-stepping every branch, but there's no way to signal when the LBR stack is full on AMD :((((. I considered using Lightweight Profiling (LWP), which has a lot more fine-grained controls for tracing instructions, but it only profiles usermode instructions. Nevertheless, LWP is still a useful feature that can be added later.
 
-When I wanted to test branch tracing, I was misled by some inconsistencies that VMware and Windows had with the AMD manual.
+When I wanted to test branch tracing, I struggled for hours due to the way VMware and Windows messed with the debugctl MSR.
 
 First of all, VMware was forcing all debugctl bits to 0, which meant that I had to do some testing outside of VMware. 
 
-
-
-
-
-Secondly, Windows manages debugctl features in a special way. According to the AMD manual, LBR tracing and BTF (branch single step) operation are controlled by bits in the DebugCtl MSR. Instead, Windows uses bit 8 and 9 in DR7 control the LBR tracing and BTF bits in windows. (See KiRestoreDebugState or whatever)
-
-
-
-
+Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). In this manner, Windows manages extended debug features, and my changes this debugctl are essentially ignored. 
 
 ### Process-specific syscall hooks
 
