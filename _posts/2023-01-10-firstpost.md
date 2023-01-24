@@ -135,19 +135,26 @@ void EnableSvme()
 
 ### Setting up the VMCB
 
+
 The Virtual Machine Control Block (VMCB) contains core-specific information about the AMD virtual machine's state. It is split into two parts: the save state area and the control area.
 
+
 The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. Host register values are simply copied to the save state area in ForteVisor.
+
 
 picture here:
 ![alt text](https://github.com/MellowNight/MellowNight.github.io/blob/main/assets/img/VMCB.jpeg "Logo Title Text 1")
 
 
+
 ### MSR intercepts
+
 
 ForteVisor only intercepts reads and writes to the EFER msr. The EFER.svme bit indicates that AMD SVM is enabled, so it's necessary to spoof it to zero to hide the hypervisor. 
 
+
 EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever the guest attempts to write to an MSR outside of the ranges specified in the manual.
+
 
 *Look into the manual to see the MSR permission map format lol*
 ```cpp
@@ -187,6 +194,7 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 }
 ```
 
+
 *Preventing crashes from unimplemented MSR access*
 
 ```cpp
@@ -208,13 +216,18 @@ if (!(
 ```
 
 
+
 ### Setting up nested paging
+
 
 Nested paging/AMD RVI adds a second layer of paging that translates gPA (guest physical address) to hPA (host physical address). gPA are identity mapped to hPA with ForteVisor's nested page table setup.
 
+
 A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
 
+
 Here's the steps to set up an nested paging directory for identity mapping:
+
 
 1. Obtain physical memory ranges with MmGetPhysicalMemoryRanges. 
 2. Allocate a page for npml4/nCR3
@@ -224,12 +237,15 @@ Here's the steps to set up an nested paging directory for identity mapping:
 *This is basically the same concept as normal virtual->physical paging lol*
 
 
+[PICTURE HERE FOR SETUP]
 
 
 
 ### vmmcall interface
 
+
 The guest can invoke functions in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the identifier in RCX, one of the following operations are executed:
+
 
 ```cpp
 enum VMMCALL_ID : uintptr_t
@@ -245,11 +261,15 @@ enum VMMCALL_ID : uintptr_t
 };
 ```
 
+
 Wrapper functions for the vmmcall interface are provided by fortevisor-api.lib. You can use it by including forte api.h and the static library in your project.
+
 
 ### VM launch and VM exit operation
 
+
 The final step of preparing for SVM operation is executing vmload to load hidden guest state information. The vmrun instruction launches the hypervisor, stops host state execution, and loads the guest context from VMCB.
+
 
 ```cpp
 ; omitted
@@ -274,9 +294,12 @@ EnterVm:
 	call HandleVmexit	; vmexit handler
 ```
 
+
 Once a #VMEXIT occurs, line 
 
+
 To stop the virtual machine, we do the following:
+
 
 1. load guest state
 2. disable IF
@@ -287,11 +310,15 @@ To stop the virtual machine, we do the following:
 7. set RCX to RSP
 8. return and jump to RBX
 
+
 ## Features
+
 
 ### Nested Page Table hooks
 
+
 The principle of EPT/NPT stealth hooking is based off of the ability to intercept memory accesses to pages. Page permission based hooking techniques have been used for decades, from guard page hooking to nehalem TLB-split hooking. 
+
 
 Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can then handle an EPT fault caused by an attempted read from the page, point the EPT's pfn to the hookless page, and set the memory to read/write only. This memory read trapping mechanism effectively hides byte patches from security systems such as patchguard and Battleye. The hooked copy of this page is restored 
 once the VMM intercepts an attempted execute on the read/write only mapping of the page.
@@ -302,7 +329,9 @@ once the VMM intercepts an attempted execute on the read/write only mapping of t
 
 AMD nested page tables do not support execute-only pages, so AMD system programmers would need to trap every execute access to the hook page, causing a lot of overhead. Two workarounds can be considered if you really want execute only pages:
 
+
 **SEV-SNP (secure nested paging):** guests can restrict pages to execute-only with VMPL permission masks in the RMP (reverse map table). These RMP permission checks are only in effect when SEV-SNP is enabled. See AMD system programming manual sections 15.36.3 to 15.36.5 for more info.  
+
 
 **Memory Protection Keys:** 
     
@@ -310,7 +339,9 @@ Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, 
 
 To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Whenever we execute the hooked page, #NPF is thrown and we enter into the **"shadow"** ncr3. The processor switches back to **"primary"** ncr3 whenever RIP goes outside of the hooked page.
 
+
 *This how [an NPT hook(link to setnpthook)]is set up:*
+
 
 1. __writecr3() to attach to the process cr3 saved in VMCB
 2. Make a NonPagedPool copy of the target page 
@@ -319,15 +350,21 @@ To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page 
 5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
 
+
 **[AMD NPT hook diagram here, WITH STEPS!!!]**
+
 
 One problem was caused by Windows' KVA shadowing feature, which created two page directories for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where ForteVisor's code wasn't even mapped.
 
+
 Any process interfacing with ForteVisor must run as administrator to prevent this crash!
+
 
 After setting the NPT hook, the hooked page will trigger #NPF vmexit on execute. This is how the #NPF is handled:
 
+
 **[AMD NPT hook diagram here, WITH STEPS!!!]**
+
 
 ```
 faulting_shadow_npte = GetPte(faulting_guest_physical, ncr3_directories[shadow])
@@ -357,11 +394,15 @@ if switch_ncr3 == true:
 
 ### Sandboxing 
 
+
 We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and control read, write, and execute access coming from the region. This serves as the basis for some current EDR, software containerization, or reverse engineering/dynamic analysis solutions. KVM's EPT/NPT capability is used by Intel Kata and Docker Desktop to isolate containers. The concept behind ForteVisor's NPT sandbox is similar to Bromium's LAVA tool. 
+
 
 #### intercepting out-of-module execution
 
+
 ForteVisor's sandboxing feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3. Whenever RIP leaves a sandbox region, the following events occur:
+
 
 1. #NPF is thrown
 2. Switch from **"sandbox"** context -> **"Primary"** context
@@ -370,11 +411,15 @@ ForteVisor's sandboxing feature isolates a memory region by disabling execute fo
 4. All registers are saved
 5. guest execution resumes at the callback, in **"Primary"** context
 
+
 This mechanism can be used to log the APIs called or exceptions thrown by a module.
+
 
 #### intercepting out-of-module memory access
 
+
 I didn't figure out how to log every single memory read and write, because guest page table walks involved reading and writing. I could only properly log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"sandbox_single_step"**, with every page mapped as RWX. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
+
 
 1. In #NPF handler,
 2.
@@ -385,29 +430,41 @@ I didn't figure out how to log every single memory read and write, because guest
 
 #### ForteVisor sandbox vs. other tools
 
+
 Other projects utilize other methods to achieve the same goal of dynamically analyzing a program in a sandbox:
+
 
 - **Qiling:** Uses a CPU emulator to intercept API calls, memory access, and more
 - **KACE:** Intercepts access to DLLs and system modules using an exception handler 
 - **Simpleator:** Uses Hyper-V API to create an isolated guest address space, and logs Winapi calls
+
 
 ForteVisor's advantage is that programs don't have to be emulated from the start, and a fabricated system environment doesn't need to be set up. Programs can be sandboxed on-the-fly, allowing you to analyze highly complex software.
 
 
 ### Branch Tracing
 
-My implementation of branch tracing utilizes LBR (Last Branch Record) to record LastBranchToIP and LastBranchFromIP, and BTF (Branch Trap Flag) to throw #DB to the hypervisor for every branch executed. Using the LBR stack without BTF would greatly reduce overhead, but AMD doesn't provide any mechanism to signal when the LBR stack is full :((((. I also considered 
+
+My implementation of branch tracing utilizes LBR (Last Branch Record) to record LastBranchToIP and LastBranchFromIP, and BTF (Branch Trap Flag) to throw #DB to the hypervisor for every branch executed. Using the LBR stack without BTF would greatly reduce overhead, but AMD doesn't provide any mechanism to signal when the LBR stack is full :((((. I also considered (IBS? LWP? WHAT WAS IT CALLED? THE RING 3 ONLY THING)
+
 
 When I wanted to test extended debug features in my hypervisor, I was misled by some inconsistencies that VMware and Windows had with the AMD system programming manual. 
 
+
 First of all, I tried testing within VMware, but nothing happened when I enabled BTF and LBR. DebugCtl features were all supported according to the results of cpuid, so I was really confused. After reviewing the documentation for DebugCtl in the AMD manual several times, I just checked if the DebugCtl.LBR bit was still set after I set it, but it wasn't. Apparently, VMware was forcing these debugctl features to be disabled, which meant that I had to do some testing outside of VMware. 
+
+
 
 Secondly, Windows manages debugctl features in a special way. According to the AMD manual, LBR tracing and BTF (branch single step) operation are controlled by bits in the DebugCtl MSR. I set the bits accordingly and the bits stayed that way, but #DB was being thrown, even though cpuid indicated that both were supported . I spent hours and hours figuring out my issue, until I realized that bit 8 and 9 in DR7  control the LBR tracing and BTF bits in windows.
 
+
 ### Process-specific syscall hooks
+
 
 in progress...
 
+
 ## Future plans
+
 
 I have more interesting projects to work on, but if I ever decide to extend my hypervisor, I would write a x64dbg plugin to interface with it.
