@@ -352,16 +352,39 @@ if switch_ncr3 == true:
 
 We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and control read, write, and execute access coming from the region. This serves as the basis for some current EDR, software containerization, or reverse engineering/dynamic analysis solutions. KVM's EPT/NPT capability is used by Intel Kata and Docker Desktop to isolate containers. The concept behind ForteVisor's NPT sandbox is similar to Bromium's LAVA tool. 
 
-ForteVisor's sandboxing feature switches nCR3 context in the same way as NPT hooking, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3. We can use this to log the APIs called or memory accessed by DLLs. 
+#### intercepting out-of-module execution
 
-#### intercepting execution that leaves the sandbox
+ForteVisor's sandboxing feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3. Whenever RIP leaves a sandbox region, the following events occur:
 
-Whenever the RIP executes outside of a sandboxed memory region, the vmexit handler simply saves registers and sets guest RIP to an instrumentation callback registered by the user. The user can manipulate the registers and log data from inside this callback. 
+1. #NPF is thrown
+2. Switch from **"sandbox"** context -> **"Primary"** context
+2. VMM sets RIP to a user-registered callback
+3. Execute destination is pushed onto the stack; the instrumentation callback will return to this address
+4. All registers are saved
+5. guest execution resumes at the callback, in **"Primary"** context
+
+This mechanism can be used to log the APIs called or exceptions thrown by a module.
+
+#### intercepting out-of-module memory access
+
+I didn't figure out how to log every single memory read and write, because guest page table walks involved reading and writing. I could only properly log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"sandbox_single_step"**, with every page mapped as RWX. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
+
+1. In #NPF handler,
+2.
+3.Blocked read/write instructions would be single-stepped in this special context, then **"primary"** context would be restored.
+
+4.
 
 
-#### logging out- of sandbox reads
+#### ForteVisor sandbox vs. other tools
 
-I didn't figure out how to properly log reads and writes, because guest page table walks involved reading and writing. I can only log reads and writes by denying access to specific pages
+Other projects utilize other methods to achieve the same goal of dynamically analyzing a program in a sandbox:
+
+- **Qiling:** Uses a CPU emulator to intercept API calls, memory access, and more
+- **KACE:** Intercepts access to DLLs and system modules using an exception handler 
+- **Simpleator:** Uses Hyper-V API to create an isolated guest address space, and logs Winapi calls
+
+ForteVisor's advantage is that programs don't have to be emulated from the start, and a fabricated system environment doesn't need to be set up. Programs can be sandboxed on-the-fly, allowing you to analyze highly complex software.
 
 
 ### Branch Tracing
