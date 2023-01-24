@@ -457,6 +457,10 @@ When I wanted to test branch tracing, I was misled by some inconsistencies that 
 
 First of all, VMware was forcing all debugctl bits to 0, which meant that I had to do some testing outside of VMware. 
 
+
+
+
+
 Secondly, Windows manages debugctl features in a special way. According to the AMD manual, LBR tracing and BTF (branch single step) operation are controlled by bits in the DebugCtl MSR. Instead, Windows uses bit 8 and 9 in DR7 control the LBR tracing and BTF bits in windows. (See KiRestoreDebugState or whatever)
 
 
