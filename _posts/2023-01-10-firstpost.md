@@ -8,7 +8,9 @@ date: 2023-01-19 01:01:01 -0000
 
 A while ago, I wrote a type-2 AMD hypervisor to dynamically analyze anti-cheats and hide internal cheats. I no longer want to treat protected software as a black box, which is why I stopped working on this project to study other topics such as deobfuscation. This is by no means a mature hypervisor that intercepts every special guest instruction. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, ForteVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
 
+
 I will outline the implementation details of my AMD hypervisor, and explain some potential issues throughout the process. 
+
 
 ## Virtual machine setup
 
@@ -16,7 +18,9 @@ I will outline the implementation details of my AMD hypervisor, and explain some
 
 To start off, I tried to load my hypervisor with KDMapper but I got some mysterious crashes. The crash dump was corrupted, so it didn't give me any helpful information. Why didn't I crash when using OSRLoader?
 
+
 [WINDBG_PICTURE_HERE]
+
 
 The reason why it was crashing was because I was running all my initialization code from within kdmapper's process context, thus KDMapper's cr3 would be saved in guest VMCB. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
 
@@ -25,11 +29,14 @@ The reason why it was crashing was because I was running all my initialization c
 
 Before any VM initialization, three conditions must be met:
 
+
 1. AMD SVM must be supported.
 2. Virtualization must be enabled in BIOS, so that VM_CR.SVMDIS can be set to 0 and VM_CR.LOCK can be locked.
 3. The MSR_EFER.svme bit is set, after conditions #1 and #2 are met.
 
+
 *First, we check if AMD SVM is supported*
+
 ```cpp
 enum CPUID
 {    
