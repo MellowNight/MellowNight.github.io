@@ -330,11 +330,12 @@ once the VMM intercepts an attempted execute on the read/write only mapping of t
 AMD nested page tables do not support execute-only pages, so AMD system programmers would need to trap every execute access to the hook page, causing a lot of overhead. Two workarounds can be considered if you really want execute only pages:
 
 
-**SEV-SNP (secure nested paging):** guests can restrict pages to execute-only with VMPL permission masks in the RMP (reverse map table). These RMP permission checks are only in effect when SEV-SNP is enabled. See AMD system programming manual sections 15.36.3 to 15.36.5 for more info.  
+**SEV-SNP (secure nested paging):** pages in the guest can be restricted to execute-only with VMPL permission masks in the RMP (reverse map table). These RMP permission checks are only in effect when SEV-SNP is enabled. See AMD system programming manual sections 15.36.3 to 15.36.5.  
 
       
 
-**Memory Protection Keys:** 
+**Memory Protection Keys:** execute-only memory can be achieved with with MPK by disabling read access
+through the PKRU register and allowing execution through the page table. Memory protection keys control read and write access to pages, but ignore instruction fetches. See AMD system programming manual section 5.6.7.
     
 Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I needed to somehow hide my hooks by trapping executes on pages.
 
@@ -419,14 +420,17 @@ This mechanism can be used to log the APIs called or exceptions thrown by a modu
 #### intercepting out-of-module memory access
 
 
-I didn't figure out how to log every single memory read and write, because guest page table walks involved reading and writing. I could only properly log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"sandbox_single_step"**, with every page mapped as RWX. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
+I didn't figure out how to log every single memory read and write, because guest page table walks involved reading and writing. I could only properly log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"all access"**, with every page mapped as RWX. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
 
 
-1. In #NPF handler,
-2.
-3.Blocked read/write instructions would be single-stepped in this special context, then **"primary"** context would be restored.
-
-4.
+1. #NPF is thrown
+2. Switch to special **"all access"** context
+3. the read/write instruction is single-stepped 
+2. Switch from **"all access"** context -> **"Primary"** context
+4. VMM sets RIP to a user-registered callback
+5. Execute destination is pushed onto the stack; the instrumentation callback will return to this address
+6. All registers are saved
+7. guest execution resumes at the callback, in **"Primary"** context
 
 
 #### ForteVisor sandbox vs. other tools
@@ -435,7 +439,7 @@ I didn't figure out how to log every single memory read and write, because guest
 Other projects utilize other methods to achieve the same goal of dynamically analyzing a program in a sandbox:
 
 
-- **Qiling:** Uses a CPU emulator to intercept API calls, memory access, and more
+- **Qiling, Speakeasy:** Uses a CPU emulator to intercept API calls, memory access, and more
 - **KACE:** Intercepts access to DLLs and system modules using an exception handler 
 - **Simpleator:** Uses Hyper-V API to create an isolated guest address space, and logs Winapi calls
 
@@ -445,18 +449,18 @@ ForteVisor's advantage is that programs don't have to be emulated from the start
 
 ### Branch Tracing
 
+The branch tracing feature in ForteVisor uses a combination of Last Branch Record (LBR) and Branch Trap Flag (BTF), to notify the VMM whenever a branch is executed.
 
-My implementation of branch tracing utilizes LBR (Last Branch Record) to record LastBranchToIP and LastBranchFromIP, and BTF (Branch Trap Flag) to throw #DB to the hypervisor for every branch executed. Using the LBR stack without BTF would greatly reduce overhead, but AMD doesn't provide any mechanism to signal when the LBR stack is full :((((. I also considered (IBS? LWP? WHAT WAS IT CALLED? THE RING 3 ONLY THING)
+The problem with my implementation is that #DB is thrown on every branch, causing a lot of overhead. I thought of collecting branch information in the LBR stack instead of single-stepping every branch, but there's no way to signal when the LBR stack is full on AMD :((((. I considered using Lightweight Profiling (LWP), which has a lot more fine-grained controls for tracing instructions, but it only profiles usermode instructions. Nevertheless, LWP is still a useful feature that can be added later.
+
+When I wanted to test branch tracing, I was misled by some inconsistencies that VMware and Windows had with the AMD manual.
+
+First of all, VMware was forcing all debugctl bits to 0, which meant that I had to do some testing outside of VMware. 
+
+Secondly, Windows manages debugctl features in a special way. According to the AMD manual, LBR tracing and BTF (branch single step) operation are controlled by bits in the DebugCtl MSR. Instead, Windows uses bit 8 and 9 in DR7 control the LBR tracing and BTF bits in windows. (See KiRestoreDebugState or whatever)
 
 
-When I wanted to test extended debug features in my hypervisor, I was misled by some inconsistencies that VMware and Windows had with the AMD system programming manual. 
 
-
-First of all, I tried testing within VMware, but nothing happened when I enabled BTF and LBR. DebugCtl features were all supported according to the results of cpuid, so I was really confused. After reviewing the documentation for DebugCtl in the AMD manual several times, I just checked if the DebugCtl.LBR bit was still set after I set it, but it wasn't. Apparently, VMware was forcing these debugctl features to be disabled, which meant that I had to do some testing outside of VMware. 
-
-
-
-Secondly, Windows manages debugctl features in a special way. According to the AMD manual, LBR tracing and BTF (branch single step) operation are controlled by bits in the DebugCtl MSR. I set the bits accordingly and the bits stayed that way, but #DB was being thrown, even though cpuid indicated that both were supported . I spent hours and hours figuring out my issue, until I realized that bit 8 and 9 in DR7  control the LBR tracing and BTF bits in windows.
 
 
 ### Process-specific syscall hooks
