@@ -332,7 +332,7 @@ AMD nested page tables do not support execute-only pages, so AMD system programm
 
 **SEV-SNP (secure nested paging):** guests can restrict pages to execute-only with VMPL permission masks in the RMP (reverse map table). These RMP permission checks are only in effect when SEV-SNP is enabled. See AMD system programming manual sections 15.36.3 to 15.36.5 for more info.  
 
-## 
+##    
 
 **Memory Protection Keys:** 
     
