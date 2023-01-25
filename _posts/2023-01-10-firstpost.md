@@ -225,12 +225,12 @@ Nested paging/AMD RVI adds a second layer of paging that translates gPA (guest p
 A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
 
 
-Here's the steps to set up an nested paging directory for identity mapping:
+Here's the steps to set up an nested page directory for identity mapping:
 
 
 1. Obtain physical memory ranges with MmGetPhysicalMemoryRanges. 
 2. Allocate a page for npml4/nCR3
-3. Do a page walk into the nCR3 directory using each physical page address. For each nested paging level, we check the indexed NPT entry's present bit. If present == 0, we use the existing table pointed to by NPT entry's PFN; otherwise, we allocate a new table for the PFN
+3. Do a page walk into the nCR3 directory using each physical page address. For each nested page level, we check the indexed NPT entry's present bit. If present == 0, we use the existing table pointed to by NPT entry's PFN; otherwise, we allocate a new table for the PFN
 4. At the last level, point nPTE->PFN to the physical page address itself. Boom, we've created 1:1 gPA->hPA mapping for a page
 
 *This is basically the same concept as normal virtual->physical paging lol*
@@ -462,5 +462,5 @@ in progress...
 
 ## Future plans
 
+I want to use AetherVisor's functionality to create projects like comprehensive HWID spoofers, stealthy DLL injectors, or x64dbg extensions. If I ever decide to extend my hypervisor, I would add LWP and .
 
-I have more interesting projects to work on, but if I ever decide to extend my hypervisor, I would write a x64dbg plugin to interface with it.
