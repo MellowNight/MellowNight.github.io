@@ -33,18 +33,14 @@ I will refer to the signed DLL that hosts our own manually mapped DLL as the "ho
 
 I plugged Overwolf's signed OWClient.dll into my injector to use as the host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version x.x.x has a xxxkb .text section and a xxxkb .data section.
 
-
-\
-\
-\
-\
-\
-\
+&nbsp;
+&nbsp;
+&nbsp;
 
 ## SetWindowsHookEx - loading the host DLL
 
-\
-\
+&nbsp;
+&nbsp;
 
 We need to somehow remotely load the host DLL. After reversing Overwolf's DLL injection code, I found out that they use SetWindowsHookEx to inject their DLL. Lets take a look at the SetWindowsHookEx() function on MSDN:
 
