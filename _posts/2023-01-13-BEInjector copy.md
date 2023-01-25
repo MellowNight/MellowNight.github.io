@@ -46,11 +46,26 @@ I plugged Overwolf's signed OWClient.dll into my injector to use as the host dll
 \
 \
 
-We need to somehow remotely load the host DLL. After reversing Overwolf's DLL injection code, I found out that they use SetWindowsHookEx to call their DLL. Lets take a look at the SetWindowsHookEx() function on MSDN:
+We need to somehow remotely load the host DLL. After reversing Overwolf's DLL injection code, I found out that they use SetWindowsHookEx to inject their DLL. Lets take a look at the SetWindowsHookEx() function on MSDN:
 
-*Installs an application-defined hook procedure into a hook chain ... SetWindowsHookEx can be used to inject a DLL into another process.*
+*"Installs an application-defined hook procedure into a hook chain. You would install a hook procedure to monitor the system for certain types of events. These events are associated either with a specific thread or with all threads in the same desktop as the calling thread ... SetWindowsHookEx can be used to inject a DLL into another process."*
 
-SetWindowsHookEx can be used to load the host DLL, but the documentation doesn't mention that it automatically calls the entry point. This will cause problems later down the line. 
+```
+/*
+[in] idHook - The type of hook procedure to be installed.
+[in] lpfn - A pointer to the hook procedure.
+[in] hmod - A handle to the DLL containing the hook procedure pointed to by the lpfn parameter. 
+[in] dwThreadId - The identifier of the thread with which the hook procedure is to be associated. 
+*/
+
+HHOOK SetWindowsHookExA(
+  [in] int       idHook,
+  [in] HOOKPROC  lpfn,
+  [in] HINSTANCE hmod,
+  [in] DWORD     dwThreadId
+);
+```
+SetWindowsHookEx loads the DLL into the process that owns the thread with the id dwThreadId, and then calls the hook routine pointed to by lpfn.  The documentation doesn't mention that it automatically calls the entry point; this will cause problems later down the line. 
 \
 \
 
