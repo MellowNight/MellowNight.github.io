@@ -18,9 +18,52 @@ I wanted to hide from more than just DLL certificate checks, and I didn't want t
 
 This post will go over the process of making a DLL's memory mostly invisible through nested page table manipulation. 
 
-It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two memory mappings coexisting at the same address be two dimensions? lol
+It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol
 
-## Nested Page Table hooks - review
+
+**[SIMPLE DIAGRAM OF 2D INJECTOR HERE]**
+
+## Finding the right host DLL
+
+I will refer to the signed DLL that hosts our own manually mapped DLL as the "host dll". Our only two requirements for a host dll are that:
+
+1. The .text and .data sections of the DLL are large enough 
+\
+2. The DLL is allowed to load by the the target process/game 
+
+I plugged Overwolf's signed OWClient.dll into my injector to use as the host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version x.x.x has a xxxkb .text section and a xxxkb .data section.
+
+
+\
+\
+\
+\
+\
+\
+
+## SetWindowsHookEx - loading the host DLL
+
+\
+\
+
+We need to somehow remotely load the host DLL. After reversing Overwolf's DLL injection code, I found out that they use SetWindowsHookEx to call their DLL. Lets take a look at the SetWindowsHookEx() function on MSDN:
+
+*Installs an application-defined hook procedure into a hook chain ... SetWindowsHookEx can be used to inject a DLL into another process.*
+
+SetWindowsHookEx can be used to load the host DLL, but the documentation doesn't mention that it automatically calls the entry point. This will cause problems later down the line. 
+\
+\
+
+Some DLLs will unload itself when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL.  We don't need to execute the entry point, we just need the DLL to be loaded. 
+
+[Diagram for the DLL unload problem]
+
+
+## manually mapping our own invisible payload
+
+### Nested Page Table hooks - review
+
+We are going to 
 
 1. __writecr3() to attach to the process cr3 saved in VMCB
 2. Make a NonPagedPool copy of the target page 
@@ -29,23 +72,10 @@ It's called 2D injector, because if a linear address space is one-dimensional, w
 5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
 
-## Finding the right host DLL
 
-Our only two requirements for a DLL to host our payload are that:
+### Preventing OWClient from being called twice
 
-1. The .text and .data sections of the DLL are large enough \
-2. The DLL is accepted by the the target process/game 
-\
-\
-\
-\
-\
-## SetWindowsHookEx - loading the signed DLL
-
-\
-\
-
-Some DLLs will unload itself when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL. We don't need to execute the entry point, we just need the DLL to be loaded.
+This is because OWClient.dll is context-aware, and tries to access Overwolf data that isn't present.
 
 
 ## can't call API functions
