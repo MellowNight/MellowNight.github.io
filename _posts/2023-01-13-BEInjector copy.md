@@ -55,5 +55,5 @@ Some DLLs will unload itself when the entry point is executed, if they aren't in
 
 2D injector has two issues:
 - Performance: Every API call, exception, and syscall will throw #NPF and trigger an nCR3 switch. This caused a noticeable FPS drop when running internal cheats.
-- Detection: The .rdata and .data sections are exposed, and strings can be scanned by ACs/AVs/EDRs.  
+- Detection: The .rdata and .data sections are exposed, and can be scanned for suspicious strings. This can be partially fixed by encrypting .rdata strings, but some other data structures can't easily be encrypted.
 
