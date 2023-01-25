@@ -52,7 +52,7 @@ We need to somehow remotely load the host DLL. After reversing Overwolf's DLL in
 &nbsp;
 &nbsp;
 &nbsp;
-
+d
 ```
 /*
 [in] idHook - The type of hook procedure to be installed.
