@@ -65,7 +65,7 @@ HHOOK SetWindowsHookExA(
   [in] DWORD     dwThreadId
 );
 ```
-SetWindowsHookEx loads the DLL into the process that owns the thread with the id dwThreadId, and then calls the hook routine pointed to by lpfn.  The documentation doesn't mention that it automatically calls the entry point. The will cause problems later down the line. 
+SetWindowsHookEx loads the DLL into the process that owns the thread with the id dwThreadId, and then calls the hook routine pointed to by lpfn.  The documentation doesn't mention that it automatically calls the entry point. The entry point will cause problems later down the line. 
 \
 \
 
