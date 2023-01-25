@@ -28,7 +28,7 @@ It's called 2D injector, because if a linear address space is one-dimensional, w
 I will refer to the signed DLL that hosts our own manually mapped DLL as the "host dll". Our only two requirements for a host dll are that:
 
 1. The .text and .data sections of the DLL are large enough 
-\
+&nbsp;
 2. The DLL is allowed to load by the the target process/game 
 
 I plugged Overwolf's signed OWClient.dll into my injector to use as the host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version x.x.x has a xxxkb .text section and a xxxkb .data section.
