@@ -73,7 +73,11 @@ SetWindowsHookEx loads the DLL into the process that owns the thread with the id
 \
 
 Some DLLs will unload itself when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL.  We don't need to execute the entry point, we just need the DLL to be loaded. 
-
+<br> 
+<br> 
+<br> 
+<br> 
+<br> 
 [Diagram for the DLL unload problem]
 
 
