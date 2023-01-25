@@ -36,6 +36,7 @@ I plugged Overwolf's signed OWClient.dll into my injector to use as the host dll
 &nbsp;
 &nbsp;
 &nbsp;
+&nbsp;
 
 ## SetWindowsHookEx - loading the host DLL
 
@@ -45,6 +46,12 @@ I plugged Overwolf's signed OWClient.dll into my injector to use as the host dll
 We need to somehow remotely load the host DLL. After reversing Overwolf's DLL injection code, I found out that they use SetWindowsHookEx to inject their DLL. Lets take a look at the SetWindowsHookEx() function on MSDN:
 
 *"Installs an application-defined hook procedure into a hook chain. You would install a hook procedure to monitor the system for certain types of events. These events are associated either with a specific thread or with all threads in the same desktop as the calling thread ... SetWindowsHookEx can be used to inject a DLL into another process."*
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
 
 ```
 /*
