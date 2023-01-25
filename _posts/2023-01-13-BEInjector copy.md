@@ -74,7 +74,20 @@ Some DLLs will unload itself when the entry point is executed, if they aren't in
 
 ### Nested Page Table hooks - review
 
-We are going to 
+AetherVisor's a Nested page table (NPT) hook feature will create a shadow copy of a page, that is mapped in instead of the original page when RIP enters the page. My implementation of NPT hooking is described in more detail in my AetherVisor post{LINK TO AETHERVISOR POST}
+
+Our objective here is to hide the entire payload inside of the NPT hook shadow pages. We are treating entire 4kb pages in the payload as if it's some hook shellcode. 
+
+*The concept is pretty simple, here's pseudocode:*
+```
+for (offset = cheat_mapped; offset < (cheat_mapped + rdata_offset); offset += PAGE_SIZE)
+{
+    Driver::SetNptHook(pid, PAGE_SIZE, cheat_base + (offset - cheat_mapped), offset);
+}	
+```
+
+The SetNptHook() API function only works on memory inside of the caller's process context, so I had to write a kernel driver to attach to the target process (using KeStackAttachProcess) to map in my payload. 
+
 
 1. __writecr3() to attach to the process cr3 saved in VMCB
 2. Make a NonPagedPool copy of the target page 
@@ -82,6 +95,9 @@ We are going to
 4. Give rwx permissions to the nPTE of the copy page, in **"shadow"** ncr3
 5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
+
+
+
 
 
 ### Preventing OWClient from being called twice
