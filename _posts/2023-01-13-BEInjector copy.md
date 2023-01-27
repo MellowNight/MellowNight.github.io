@@ -109,8 +109,6 @@ The SetNptHook() API function only works on memory inside of the caller's proces
 
 
 
-
-
 ### Preventing OWClient from being called twice
 
 This is because OWClient.dll is context-aware, and tries to access Overwolf data that isn't present.
