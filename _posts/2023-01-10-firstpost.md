@@ -6,10 +6,12 @@ date: 2023-01-19 01:01:01 -0000
 
 ## Introduction
 
-A while ago, I wrote a type-2 AMD hypervisor to dynamically analyze anti-cheats and hide internal cheats. I no longer want to treat protected software as a black box, which is why I stopped working on this project to study other topics such as deobfuscation. This is by no means a mature hypervisor that intercepts every special guest instruction. For larger projects and stable tool development, it's better to modify KVM and build your tools using KVM's interface. Although KVM has its advantages, AetherVisor will always be useful for me for building minimal, stealthy, dynamic analysis tools and writing hacks.
-
+A while ago I wrote AetherVisor, a type-2 AMD hypervisor framework for stealthy dynamic analysis and memory hacking. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as deobfuscation. This is a pretty minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
+<br>
+<br> 
 
 This is an general overview of AetherVisor's implementation, with descriptions of some potential issues.
+<br> 
 
 ## Virtual machine setup
 
