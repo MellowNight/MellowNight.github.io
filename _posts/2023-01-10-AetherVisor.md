@@ -143,18 +143,18 @@ void EnableSvme()
 picture here:
 ![alt text](https://github.com/MellowNight/MellowNight.github.io/blob/main/assets/img/VMCB.jpeg "Logo Title Text 1")
 
-
+<br> 
 
 ### MSR intercepts
 
+&emsp;&emsp;AetherVisor only intercepts reads and writes to the EFER msr. The EFER.svme bit indicates that AMD SVM is enabled, so it's necessary to spoof it to zero to hide the hypervisor. 
 
-AetherVisor only intercepts reads and writes to the EFER msr. The EFER.svme bit indicates that AMD SVM is enabled, so it's necessary to spoof it to zero to hide the hypervisor. 
-
-
-EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever the guest attempts to write to an MSR outside of the ranges specified in the manual.
-
+<br>
 
 *Look into the manual to see the MSR permission map format lol*
+
+<br>
+
 ```cpp
 size_t bits_per_msr = 16000 / 8000;
 size_t bits_per_byte = sizeof(char) * 8;
@@ -191,6 +191,13 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
     guest_regs->rdx = msr_value.HighPart;
 }
 ```
+
+
+<br> 
+
+&emsp;&emsp;EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever the guest attempts to write to an MSR outside of the ranges specified in the manual.
+
+
 
 
 *Preventing crashes from unimplemented MSR access*
