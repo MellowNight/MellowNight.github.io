@@ -24,6 +24,7 @@ Before any VM initialization, three conditions must be met:
 1. AMD SVM must be supported.
 2. Virtualization must be enabled in BIOS, so that VM_CR.SVMDIS can be set to 0 and VM_CR.LOCK can be locked.
 3. The MSR_EFER.svme bit is set, after conditions #1 and #2 are met.
+
 <br> 
 <br> 
 
@@ -43,7 +44,7 @@ bool IsSvmSupported()
 
 	__cpuid(cpu_info, CPUID::feature_identifier);
 	
-		// 1. check if SVM is supported with CPUID Fn8000_0001_ECX
+	// 1. check if SVM is supported with CPUID Fn8000_0001_ECX
 
 	if ((cpu_info[2] & (1 << 2)) == 0)
 	{
@@ -75,8 +76,9 @@ bool IsSvmSupported()
 }
 ```
 <br> 
+<br> 
 
-*The VM_CR.LOCK bit will be locked to 1 if SVM is disabled in BIOS, preventing you from changing the value of VM_CR.SVMDIS. If VM_CR.LOCK is already locked and VM_CR.SVMDIS is 1, then abort initialization. Otherwise, clear VM_CR.SVMDIS and set VM_CR.LOCK*
+*The VM_CR.LOCK bit will be locked to 1 if SVM is disabled in BIOS, preventing you from changing the value of VM_CR.SVMDIS. If VM_CR.LOCK is already locked and VM_CR.SVMDIS is 1, then abort initialization. Otherwise, clear VM_CR.SVMDIS and set VM_CR.LOCK.*
 
 <br> 
 
