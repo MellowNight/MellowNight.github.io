@@ -412,7 +412,6 @@ LaunchVm endp
 &emsp;&emsp;This must mean that the vmexit handler is somehow fked up after DriverEntry returns! If the breakpoint on vmexit is not being reached, and the exception handlers crash without double fault or bluescreen, I can assume that either the segments are messed up, or no code is mapped to the CR3 context. 
 
 <br>
-<br>
 
 &emsp;&emsp;I came to the conclusion that I received the critical error because AetherVisor was initialized from within kdmapper's process context, thus KDMapper's CR3 would have been saved in guest VMCB. After guest mode is launched, the KDmapper process exits inside guest mode, but the host page tables (used for vmexit handlers) are still using the KDMapper's CR3! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
 
