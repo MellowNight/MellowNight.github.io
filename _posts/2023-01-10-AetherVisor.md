@@ -447,10 +447,6 @@ Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, 
 
 &emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Whenever we execute the hooked page, #NPF is thrown and we enter into the **"shadow"** ncr3. The processor switches back to **"primary"** ncr3 whenever RIP goes outside of the hooked page.
 
-
-*This how [an NPT hook(link to setnpthook)]is set up:*
-**[AMD NPT hook diagram here, WITH STEPS!!!]**
-
 1. __writecr3() to attach to the process context saved in VMCB
 2. Make a NonPagedPool **shadow** copy of the target page 
 3. Copy the hook shellcode to copy page + hook page offset.    
@@ -458,40 +454,24 @@ Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, 
 5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. *If the hooked page is paged out, then your NPT hook will redirect execution on some unknown memory page!!!*
 
-One problem was caused by Windows' KVA shadowing feature, which created two CR3 contexts for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where AetherVisor's code wasn't even mapped.
+<br>
 
+*This diagram for SetNptHook()[an NPT hook(link to setnpthook)] is a lot easier to understand:*
+**[AMD NPT hook diagram here, WITH STEPS!!!]**
 
-Any process interfacing with AetherVisor must run as administrator to prevent this crash!
+<br>
 
+&emsp;&emsp;One problem was caused by Windows' KVA shadowing feature, which created two CR3 contexts for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where AetherVisor's code wasn't even mapped. Any process interfacing with AetherVisor must run as administrator to prevent this crash!
 
-After setting the NPT hook, the hooked page will trigger #NPF vmexit on execute. This is how the #NPF is handled:
+<br>
+
+After setting the NPT hook, the hooked page will throw #NPF vmexit on instruction fetch. This is how the #NPF is handled:
 
 
 **[AMD NPT hook diagram here, WITH STEPS!!!]**
 
 
-```
-faulting_shadow_npte = GetPte(faulting_guest_physical, ncr3_directories[shadow])
-
-bool switch_ncr3
-
-// instructions split across page boundary will cause infinite #NPF loop
-
-if page_align(faulting_guest_physical + 10) != page_align(faulting_guest_physical):
-	switch_ncr3 = false
-else
-	switch_ncr3 = true
-
-// if the faulting physical address is executable in shadow nCR3 context,
-// then we are entering the shadow context
-// otherwise, we are entering the primary nCR3 context
-
-if switch_ncr3 == true:
-	if faulting_shadow_npte.execute_disable == false:
-		vmcb.control_area.ncr3 = ncr3_directories[shadow]
-	else:
-		vmcb.control_area.ncr3 = ncr3_directories[primary]
-```
+<br>
 
 **When two adjacent pages have conflicting execute permissions, an #NPF might occur from an instruction split across the page boundary. This will cause an infinite #NPF loop, so you must figure out how to execute the entire instruction safely. I spent 24+ days debugging this!!*
 
