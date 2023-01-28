@@ -13,12 +13,3 @@ My long-term goal is to eventually do professional vulnerability research.
 #### By the end of 2023, I hope to finish two projects: 
  *  Windows kernel driver fuzzing (~3 months)
  *  EasyAntiCheat reversal (7-8 months).
-
-##### Header 6
-
-| head1        | head two          | three |
-|:-------------|:------------------|:------|
-| ok           | good swedish fish | nice  |
-| out of stock | good and plenty   | nice  |
-| ok           | good `oreos`      | hmm   |
-| ok           | good `zoute` drop | yumm  |
