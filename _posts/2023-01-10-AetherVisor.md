@@ -48,7 +48,7 @@ bool IsSvmSupported()
 	int32_t	cpu_info[4] = { 0 };
 
 	__cpuid(cpu_info, CPUID::feature_identifier);
-	
+
 	// 1. check if SVM is supported with CPUID Fn8000_0001_ECX
 
 	if ((cpu_info[2] & (1 << 2)) == 0)
