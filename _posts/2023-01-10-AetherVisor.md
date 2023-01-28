@@ -24,9 +24,10 @@ Before any VM initialization, three conditions must be met:
 1. AMD SVM must be supported.
 2. Virtualization must be enabled in BIOS, so that VM_CR.SVMDIS can be set to 0 and VM_CR.LOCK can be locked.
 3. The MSR_EFER.svme bit is set, after conditions #1 and #2 are met.
+<br> 
+
 *First, check if AMD SVM is supported*
 
-<br> 
 <br> 
 <br> 
 ```cpp
