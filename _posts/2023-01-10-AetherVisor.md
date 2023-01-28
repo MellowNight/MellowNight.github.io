@@ -16,29 +16,6 @@ date: 2023-01-19 01:01:01 -0000
 
 ## Virtual machine setup
 
-### Loading the hypervisor
-
-> Most of the time, I just used OSRLoader to test my hypervisor, which worked flawlessly. However, when I attempted to launch the hypervisor with KDMapper, I got the following VMWare error:
-
-[VMWARE_PICTURE_HERE]
-
-![Alt text](../assets/img/kdmapperfault1.PNG "Title")
-
-> Unfortunately, there was no crash dump, so I was unable to gather any useful information. I was really confused about why there were no similar issues with OSRLoader.
-
-
-
-Two things I am sure of are that the hypervisor launched successfully on all cores, and To understand more about the KDMapper crash, I set a breakpoint
-
-
-[CODE	_PICTURE_HERE]
-
-
-
-
-The reason why it was crashing was because I was running all my initialization code from within kdmapper's process context, thus KDMapper's cr3 would be saved in guest VMCB. After guest mode is launched, the KDmapper process exits from inside guest mode, but the host page tables are still using the old CR3 of kdmapper! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
-
-
 ### Checking for AMD-V support 
 
 Before any VM initialization, three conditions must be met:
@@ -323,6 +300,30 @@ To stop the virtual machine, we do the following:
 6. set RBX to RIP
 7. set RCX to RSP
 8. return and jump to RBX
+
+
+## Loading the hypervisor
+
+> Most of the time, I just used OSRLoader to test my hypervisor, which worked flawlessly. However, when I attempted to launch the hypervisor with KDMapper, I got the following VMWare error:
+
+[VMWARE_PICTURE_HERE]
+
+![Alt text](../assets/img/kdmapperfault1.PNG "Title")
+
+> Unfortunately, there was no crash dump, so I was unable to gather any useful information. I was confused as to why there were no similar issues with OSRLoader. There were two things I was certain of: First, the hypervisor launched successfully on all cores, and second, the crash occurred some time after I exited my driver. To learn more about this KDMapper issue, I wanted to see what happened when I triggered a vmexit before exiting DriverEntry, and what happened when I did that outside of the driver. I placed a breakpoint after vmrun, to catch vmexits:
+
+[ASM_CODE_PICTURE_HERE]
+
+> I vmmcall'ed the hyperivsor before returning from DriverEntry, and then I executed vmmcall from another driver. The breakpoint I placed right after vmrun should've been hit twice, but only one breakpoint was hit before the crash.
+
+[WINDBG_PIC_HERE]
+
+>This must mean that the vmexit handler is somehow fked up after DriverEntry returns! If the breakpoint on vmexit is not being reached, and the exception handlers crash without double fault or bluescreen, I can assume that either the segments are messed up, or no code is mapped to the CR3 context. 
+
+<br>
+<br>
+
+>I came to the conclusion that I was receiving the black screen because AetherVisor was initialized from within kdmapper's process context, thus KDMapper's CR3 would have been saved in guest VMCB. After guest mode is launched, the KDmapper process exits inside guest mode, but the host page tables (used for vmexit handlers) are still using the KDMapper's CR3! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
 
 
 ## Features
