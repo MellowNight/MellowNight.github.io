@@ -19,15 +19,14 @@ date: 2023-01-19 01:01:01 -0000
 ### Checking for AMD-V support 
 
 Before any VM initialization, three conditions must be met:
-
-
+<br> 
 1. AMD SVM must be supported.
 2. Virtualization must be enabled in BIOS, so that VM_CR.SVMDIS can be set to 0 and VM_CR.LOCK can be locked.
 3. The MSR_EFER.svme bit is set, after conditions #1 and #2 are met.
-
-
-*First, we check if AMD SVM is supported*
-
+<br> 
+<br> 
+*First, check if AMD SVM is supported: *
+<br> 
 ```cpp
 enum CPUID
 {    
