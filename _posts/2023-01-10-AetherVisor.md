@@ -221,6 +221,7 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 
 ```cpp
 // ...
+
 uint32_t msr_id = guest_regs->rcx & (uint32_t)0xFFFFFFFF;
 
 if (!(
@@ -234,6 +235,7 @@ if (!(
 	InjectException(core_data, EXCEPTION_GP_FAULT, true, 0);
 	return;
 }
+
 // ...
 ```
 
@@ -241,23 +243,18 @@ if (!(
 
 ### Setting up nested paging
 
-&emsp;&emsp;Nested paging/AMD RVI adds a second layer of page tables that translates gPA (guest physical address) to hPA (host physical address). gPA are identity mapped to hPA with AetherVisor's nested page table setup.
+&emsp;&emsp;Nested paging/AMD RVI adds a second layer of page tables that translates gPA (guest physical address) to hPA (host physical address). gPA are identity mapped to hPA with AetherVisor's nested page table setup. A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
 
 <br>
 
-&emsp;&emsp;A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
-
-<br>
-
-#### Here's the steps to set up an nested page directory for identity mapping:
+#### Here are the steps to set up an nested page directory with identity mapping:
 
 1. Obtain physical memory ranges using MmGetPhysicalMemoryRanges. 
 2. Allocate a page for npml4/nCR3
 3. Do a page walk into the nCR3 directory using each physical page address. For each nested page level, we check the indexed NPT entry's present bit. If present == 0, we use the existing table pointed to by NPT entry's PFN; otherwise, we allocate a new table for the PFN
 4. At the last level, point nPTE->PFN to the physical page address itself.
 
-
-Boom, we've created 1:1 gPA->hPA mapping for a page.
+Boom, we've created a 1:1 gPA->hPA mapping for a page.
 
 *This is basically the same as normal virtual->physical paging lol*
 
@@ -267,7 +264,7 @@ Boom, we've created 1:1 gPA->hPA mapping for a page.
 ### vmmcall interface
 
 
-The guest can invoke functions in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the identifier in RCX, one of the following operations are executed:
+The guest can invoke functions in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the code in RCX, one of the following operations are executed:
 <br>
 ```cpp
 enum VMMCALL_ID : uintptr_t
