@@ -19,6 +19,9 @@ This is a general overview of AetherVisor's implementation, with insight into so
 
 ## Virtual machine setup
 
+This first section will go over the initialization and launch process for AetherVisor. 
+<br> 
+
 ### Checking for AMD-V support 
 
 Before any VM initialization, three conditions must be met:
