@@ -2,17 +2,17 @@
 layout: post
 title: "How AetherVisor works under the hood"
 date: 2023-01-19 01:01:01 -0000
+author: MellowNight
 ---
 
 ## Introduction
 
-&emsp;&emsp;A while ago I wrote AetherVisor, a type-2 AMD hypervisor framework for stealthy dynamic analysis and memory hacking. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as x86 deobfuscation. AetherVisor is a minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
+&emsp;&emsp;A while ago I wrote AetherVisor, a stealthy dynamic analysis and memory hacking framework, based on an AMD hypervisor. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as x86 deobfuscation. AetherVisor is a minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
 <br>
 <br> 
 
 This is a general overview of AetherVisor's implementation, with insight into some potential issues.
 
-<br> 
 <br> 
 
 ## Virtual machine setup
