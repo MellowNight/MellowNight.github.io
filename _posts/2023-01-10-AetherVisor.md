@@ -5,6 +5,8 @@ date: 2023-01-19 01:01:01 -0000
 author: MellowNight
 ---
 
+<br>
+
 ## Introduction
 
 &emsp;&emsp;A while ago I wrote AetherVisor, a stealthy dynamic analysis and memory hacking framework, based on a type-2 AMD hypervisor. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as x86 deobfuscation. AetherVisor is a minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
@@ -25,7 +27,6 @@ Before any VM initialization, three conditions must be met:
 2. Virtualization must be enabled in BIOS, so that VM_CR.SVMDIS can be set to 0 and VM_CR.LOCK can be locked.
 3. The MSR_EFER.svme bit is set, after conditions #1 and #2 are met.
 
-<br> 
 <br> 
 
 *First, check if AMD SVM is supported*
@@ -139,8 +140,11 @@ void EnableSvme()
 
 &emsp;&emsp;The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. Host register values are simply copied to the save state area in AetherVisor.
 
+<br>
 
-picture here:
+*The VMCB*
+<br>
+
 ![alt text](https://github.com/MellowNight/MellowNight.github.io/blob/main/assets/img/VMCB.jpeg "Logo Title Text 1")
 
 <br> 
