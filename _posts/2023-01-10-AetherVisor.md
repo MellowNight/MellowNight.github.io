@@ -125,14 +125,14 @@ bool IsSvmUnlocked()
 ```
 enum MSR : UINT64
 { 
-    EFER = 0xC0000080,
+	EFER = 0xC0000080,
 };
 
 void EnableSvme()
 {
 	MsrEfer	msr;
 	msr.flags = __readmsr(MSR::EFER);
-	msr.svme = 1;
+	sr.svme = 1;
 	__writemsr(MSR::EFER, msr.flags);
 }
 ```
