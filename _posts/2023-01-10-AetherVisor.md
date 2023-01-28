@@ -99,7 +99,7 @@ bool IsSvmUnlocked()
 
 	msr.flags = __readmsr(MSR::VM_CR);
 
-    /*  Check if SVM is locked	*/
+	/*  Check if SVM is locked	*/
 
 	if (msr.svm_lock == 0)		// bit 3
 	{
