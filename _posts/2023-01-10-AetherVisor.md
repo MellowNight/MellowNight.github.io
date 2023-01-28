@@ -19,7 +19,8 @@ This is a general overview of AetherVisor's implementation, with insight into so
 
 ## Virtual machine setup
 
-This first section will go over the initialization and launch process for AetherVisor. 
+This first section will go over the initialization and launch process for AetherVisor.
+
 <br> 
 
 ### Checking for AMD-V support 
@@ -114,8 +115,11 @@ bool IsSvmUnlocked()
 	return true;
 }
 ```
+
+<br>
 <br>
 *Finally, we can enable AMD SVM for this core*
+
 <br>
 
 ```
