@@ -153,7 +153,7 @@ void EnableSvme()
 
 <br>
 
-![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/VMCB.jpeg "Logo Title Text 1")
+![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/VMCB.png "Logo Title Text 1")
 
 <br> 
 
@@ -204,15 +204,15 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 }
 ```
 
-
 <br> 
 
-&emsp;&emsp;EasyAntiCheat and Battleye write to invalid MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) whenever the guest attempts to write to an MSR outside of the ranges specified in the manual.
+&emsp;&emsp;EasyAntiCheat and Battleye write to unimplemented MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) when the guest writes to an MSR outside the manual's specified ranges.
 
-
-
+<br>
 
 *Preventing crashes from unimplemented MSR access*
+
+<br>
 
 ```cpp
 // ...
@@ -232,7 +232,7 @@ if (!(
 // ...
 ```
 
-
+<br>
 
 ### Setting up nested paging
 
