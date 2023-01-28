@@ -262,12 +262,13 @@ Boom, we've created a 1:1 gPA->hPA mapping for a page.
 
 *This is basically the same as normal virtual->physical paging lol*
 
+<br>
+
 ![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/NestedPagingSetup.png "Logo Title Text 1")
 
 <br>
 
 ### vmmcall interface
-
 
 The guest can interface with the hypervisor by executing the vmmcall instruction with specific parameters. Based on the code passed in RCX, one of the following operations are executed:
 
@@ -459,7 +460,11 @@ Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, 
 <br>
 
 *This diagram for SetNptHook()[an NPT hook(link to setnpthook)] is a lot easier to understand:*
-**[AMD NPT hook diagram here, WITH STEPS!!!]**
+
+<br>
+
+![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/NestedPagingSetup.png "Logo Title Text 1")
+
 
 <br>
 
