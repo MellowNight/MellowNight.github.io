@@ -285,9 +285,9 @@ enum VMMCALL_ID : uintptr_t
 <br>
 Wrapper functions for the vmmcall interface are provided by Aethervisor-api.lib. You can use it by including Aether api.h and the static library in your project.
 
+<br>
 
 ### VM launch and VM exit operation
-
 
 The final step of preparing for SVM operation is executing vmload to load hidden guest state information. The vmrun instruction launches the hypervisor, stops host state execution, and loads the guest context from VMCB.
 
@@ -362,10 +362,10 @@ To stop the virtual machine, we do the following:
 ### Nested Page Table hooks
 
 
-The principle of EPT/NPT stealth hooking is based off of the ability to intercept memory accesses to pages. Page permission based hooking techniques have been used for decades, from guard page hooking to nehalem TLB-split hooking. 
+&emsp;&emsp;The principle of EPT/NPT stealth hooking is based off of the ability to intercept memory accesses to pages. Page permission based hooking techniques have been used for decades, from guard page hooking to nehalem TLB-split hooking. 
 
 
-Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can then handle an EPT fault caused by an attempted read from the page, point the EPT's pfn to the hookless page, and set the memory to read/write only. This memory read trapping mechanism effectively hides byte patches from security systems such as patchguard and Battleye. The hooked copy of this page is restored 
+&emsp;&emsp;Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can then handle an EPT fault caused by an attempted read from the page, point the EPT's pfn to the hookless page, and set the memory to read/write only. This memory read trapping mechanism effectively hides byte patches from security systems such as patchguard and Battleye. The hooked copy of this page is restored 
 once the VMM intercepts an attempted execute on the read/write only mapping of the page.
 
 
@@ -438,7 +438,7 @@ if switch_ncr3 == true:
 ### Sandboxing 
 
 
-We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and control read, write, and execute access coming from the region. This serves as the basis for some current EDR, software containerization, or reverse engineering/dynamic analysis solutions. KVM's EPT/NPT capability is used by Intel Kata and Docker Desktop to isolate containers. The concept behind AetherVisor's NPT sandbox is similar to Bromium's LAVA tool. 
+&emsp;&emsp;We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and control read, write, and execute access coming from the region. This serves as the basis for some current EDR, software containerization, or reverse engineering/dynamic analysis solutions. KVM's EPT/NPT capability is used by Intel Kata and Docker Desktop to isolate containers. The concept behind AetherVisor's NPT sandbox is similar to Bromium's LAVA tool. 
 
 
 #### intercepting out-of-module execution
@@ -454,6 +454,7 @@ AetherVisor's sandboxing feature isolates a memory region by disabling execute f
 4. All registers are saved
 5. guest execution resumes at the callback, in **"Primary"** context
 
+<br>
 
 This mechanism can be used to log the APIs called or exceptions thrown by a module.
 
