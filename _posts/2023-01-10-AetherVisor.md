@@ -183,7 +183,12 @@ auto efer_offset = section2_offset + (bits_per_msr * (MSR::EFER - 0xC0000000));
 RtlSetBits(&bitmap, efer_offset, 2);
 ```
 
+<br>
+<br>
 *Spoofing EFER.SVME to 0*
+
+<br>
+
 ```cpp
 void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 {
@@ -224,7 +229,7 @@ if (!(
 	(msr_id > 0xC0010000) && (msr_id < 0xC0011FFF)
 	))
 {
-	/*  PUBG and Fortnite's unimplemented MSR checks    */
+	/*  Battleye/EAC/PUBG unimplemented MSR checks    */
 
 	InjectException(core_data, EXCEPTION_GP_FAULT, true, 0);
 	return;
@@ -236,34 +241,34 @@ if (!(
 
 ### Setting up nested paging
 
+&emsp;&emsp;Nested paging/AMD RVI adds a second layer of page tables that translates gPA (guest physical address) to hPA (host physical address). gPA are identity mapped to hPA with AetherVisor's nested page table setup.
 
-Nested paging/AMD RVI adds a second layer of paging that translates gPA (guest physical address) to hPA (host physical address). gPA are identity mapped to hPA with AetherVisor's nested page table setup.
+<br>
 
+&emsp;&emsp;A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
 
-A lot of magic can be done by manipulating NPT entries, such as hiding memory, hiding hooks, isolating memory spaces, etc. Think outside of the box :) 
+<br>
 
+#### Here's the steps to set up an nested page directory for identity mapping:
 
-Here's the steps to set up an nested page directory for identity mapping:
-
-
-1. Obtain physical memory ranges with MmGetPhysicalMemoryRanges. 
+1. Obtain physical memory ranges using MmGetPhysicalMemoryRanges. 
 2. Allocate a page for npml4/nCR3
 3. Do a page walk into the nCR3 directory using each physical page address. For each nested page level, we check the indexed NPT entry's present bit. If present == 0, we use the existing table pointed to by NPT entry's PFN; otherwise, we allocate a new table for the PFN
-4. At the last level, point nPTE->PFN to the physical page address itself. Boom, we've created 1:1 gPA->hPA mapping for a page
+4. At the last level, point nPTE->PFN to the physical page address itself.
 
-*This is basically the same concept as normal virtual->physical paging lol*
+
+Boom, we've created 1:1 gPA->hPA mapping for a page.
+
+*This is basically the same as normal virtual->physical paging lol*
 
 
 [PICTURE HERE FOR SETUP]
-
-
 
 ### vmmcall interface
 
 
 The guest can invoke functions in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the identifier in RCX, one of the following operations are executed:
-
-
+<br>
 ```cpp
 enum VMMCALL_ID : uintptr_t
 {
@@ -277,8 +282,7 @@ enum VMMCALL_ID : uintptr_t
     start_branch_trace = 0x11111119,
 };
 ```
-
-
+<br>
 Wrapper functions for the vmmcall interface are provided by Aethervisor-api.lib. You can use it by including Aether api.h and the static library in your project.
 
 
