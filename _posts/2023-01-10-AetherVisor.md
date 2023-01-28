@@ -268,7 +268,7 @@ Boom, we've created a 1:1 gPA->hPA mapping for a page.
 ### vmmcall interface
 
 
-The guest can invoke functions in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the code in RCX, one of the following operations are executed:
+The guest can interface with the hypervisor by executing the vmmcall instruction with specific parameters. Based on the code passed in RCX, one of the following operations are executed:
 
 <br>
 
@@ -288,7 +288,7 @@ enum VMMCALL_ID : uintptr_t
 
 <br>
 
-Wrapper functions for the vmmcall interface are provided by Aethervisor-api.lib. You can use it by including Aether api.h and the static library in your project.
+Wrapper functions for the vmmcall interface are provided by aethervisor-api.lib. You can use it by including aether_api.h and the static library in your project.
 
 <br>
 
@@ -296,6 +296,7 @@ Wrapper functions for the vmmcall interface are provided by Aethervisor-api.lib.
 
 The final step of preparing for SVM operation is executing vmload to load hidden guest state information. The vmrun instruction launches the hypervisor, stops host state execution, and loads the guest context from VMCB.
 
+<br>
 
 ```cpp
 ; omitted
@@ -305,7 +306,7 @@ EnterVm:
 	vmload rax		; vmload hidden guest state
 
 	; int 3
-	
+
 	vmrun rax		; virtualize this processor (execution will pause here)
 
 	vmsave rax		; vmexit! save hidden state
@@ -320,6 +321,7 @@ EnterVm:
 	call HandleVmexit	; vmexit handler
 ```
 
+<br>
 
 Once a #VMEXIT occurs, execution resumes and line 11 is reached.
 
