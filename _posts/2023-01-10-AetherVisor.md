@@ -33,7 +33,7 @@ Before any VM initialization, three conditions must be met:
 
 <br> 
 
-*First, check if AMD SVM is supported*
+*First, check if AMD SVM is supported:*
 
 <br> 
 ```cpp
@@ -118,7 +118,7 @@ bool IsSvmUnlocked()
 
 <br>
 <br>
-*Finally, we can enable AMD SVM for this core*
+*Finally, we can enable AMD SVM for this core:*
 
 <br>
 
@@ -149,7 +149,7 @@ void EnableSvme()
 
 <br>
 
-*The VMCB*
+*The VMCB:*
 
 <br>
 
@@ -247,15 +247,17 @@ if (!(
 
 <br>
 
-#### Here are the steps to set up an nested page directory with identity mapping:
+#### Here's how to set up an nested page directory with identity mapping:
 
 1. Obtain physical memory ranges using MmGetPhysicalMemoryRanges. 
 2. Allocate a page for npml4/nCR3
 3. Do a page walk into the nCR3 directory using each physical page address. For each nested page level, we check the indexed NPT entry's present bit. If present == 0, we use the existing table pointed to by NPT entry's PFN; otherwise, we allocate a new table for the PFN
 4. At the last level, point nPTE->PFN to the physical page address itself.
+
 <br>
 
 Boom, we've created a 1:1 gPA->hPA mapping for a page.
+
 <br>
 
 *This is basically the same as normal virtual->physical paging lol*
@@ -358,6 +360,7 @@ To stop the virtual machine, we do the following:
 
 ## Features
 
+In this second section, I will explain the implementation details of features provided by AetherVisor.
 
 ### Nested Page Table hooks
 
