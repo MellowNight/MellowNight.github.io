@@ -7,7 +7,7 @@ author: MellowNight
 
 ## Introduction
 
-&emsp;&emsp;A while ago I wrote AetherVisor, a stealthy dynamic analysis and memory hacking framework, based on an AMD hypervisor. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as x86 deobfuscation. AetherVisor is a minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
+&emsp;&emsp;A while ago I wrote AetherVisor, a stealthy dynamic analysis and memory hacking framework, based on a type-2 AMD hypervisor. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as x86 deobfuscation. AetherVisor is a minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
 <br>
 <br> 
 
@@ -76,10 +76,9 @@ bool IsSvmSupported()
 ```
 <br> 
 
-*The VM_CR.LOCK bit will be locked to 1 if virtualization is disabled in BIOS, preventing you from changing the value of VM_CR.SVMDIS. If VM_CR.LOCK is already locked and VM_CR.SVMDIS is 1, then abort initialization. Otherwise, clear VM_CR.SVMDIS and set VM_CR.LOCK*
+*The VM_CR.LOCK bit will be locked to 1 if SVM is disabled in BIOS, preventing you from changing the value of VM_CR.SVMDIS. If VM_CR.LOCK is already locked and VM_CR.SVMDIS is 1, then abort initialization. Otherwise, clear VM_CR.SVMDIS and set VM_CR.LOCK*
 
 <br> 
-
 
 ```cpp
 enum MSR : UINT64
@@ -110,8 +109,9 @@ bool IsSvmUnlocked()
 }
 ```
 <br>
-<br>
 *Finally, we can enable AMD SVM for this core*
+<br>
+
 ```
 enum MSR : UINT64
 { 
@@ -126,14 +126,16 @@ void EnableSvme()
 	__writemsr(MSR::EFER, msr.flags);
 }
 ```
+<br>
 
 ### Setting up the VMCB
 
 
-The Virtual Machine Control Block (VMCB) contains core-specific information about the AMD virtual machine's state. It is split into two parts: the save state area and the control area.
+&emsp;&emsp;The Virtual Machine Control Block (VMCB) contains core-specific information about the AMD virtual machine's state. It is split into two parts: the save state area and the control area.
 
+<br>
 
-The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. Host register values are simply copied to the save state area in AetherVisor.
+&emsp;&emsp;The save state area contains most of the guest state, including general purpose registers, control registers, and segment registers. The control area mostly consists of VM configuration options for the CPU core. Host register values are simply copied to the save state area in AetherVisor.
 
 
 picture here:
