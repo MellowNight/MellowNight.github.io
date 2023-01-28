@@ -43,7 +43,7 @@ bool IsSvmSupported()
 
 	__cpuid(cpu_info, CPUID::feature_identifier);
 
-    /*  1. check if SVM is supported with CPUID Fn8000_0001_ECX */
+    // 1. check if SVM is supported with CPUID Fn8000_0001_ECX
 
 	if ((cpu_info[2] & (1 << 2)) == 0)
 	{
@@ -63,9 +63,8 @@ bool IsSvmSupported()
 
 	DbgPrint("[SETUP] Vendor Name %s \n", vendor_name);
 
-    /*  2. check if we are running on an AMD processor or inside a VMWare guest by 
-        querying the  CPUID Fn0000_0000_E[D,C,B]X value
-    */
+	// 2. check if we are running on an AMD processor or inside a VMWare guest by 
+	// querying the  CPUID Fn0000_0000_E[D,C,B]X value
 
 	if (strcmp(vendor_name, "AuthenticAMD") && strcmp(vendor_name, "VmwareVmware"))
 	{
