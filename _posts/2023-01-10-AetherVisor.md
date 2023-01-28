@@ -150,9 +150,10 @@ void EnableSvme()
 <br>
 
 *The VMCB*
+
 <br>
 
-![alt text](https://github.com/MellowNight/MellowNight.github.io/blob/main/assets/img/VMCB.jpeg "Logo Title Text 1")
+![alt text](../assets/img/VMCB.jpeg "Logo Title Text 1")
 
 <br> 
 
