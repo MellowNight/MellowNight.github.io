@@ -341,7 +341,7 @@ To stop the virtual machine, we do the following:
 <br>
 <br>
 
-&emsp;&emsp;I came to the conclusion that I was receiving the black screen because AetherVisor was initialized from within kdmapper's process context, thus KDMapper's CR3 would have been saved in guest VMCB. After guest mode is launched, the KDmapper process exits inside guest mode, but the host page tables (used for vmexit handlers) are still using the KDMapper's CR3! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
+&emsp;&emsp;I came to the conclusion that I received the critical error because AetherVisor was initialized from within kdmapper's process context, thus KDMapper's CR3 would have been saved in guest VMCB. After guest mode is launched, the KDmapper process exits inside guest mode, but the host page tables (used for vmexit handlers) are still using the KDMapper's CR3! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
 
 
 ## Features
