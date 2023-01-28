@@ -132,7 +132,7 @@ void EnableSvme()
 {
 	MsrEfer	msr;
 	msr.flags = __readmsr(MSR::EFER);
-	sr.svme = 1;
+	msr.svme = 1;
 	__writemsr(MSR::EFER, msr.flags);
 }
 ```
@@ -327,16 +327,71 @@ Once a #VMEXIT occurs, execution resumes and line 11 is reached.
 
 <br>
 
-To stop the virtual machine, we do the following:
+### Stopping the hypervisor
 
-1. load guest state
-2. disable IF
-3. enable GIF
-4. disable SVME
-5. restore EFLAGS and re enable IF
-6. set RBX to RIP
-7. set RCX to RSP
-8. return and jump to RBX
+To completely stop the hypervisor, we vmexit out of guest state, disable SVM, load the guest state registers, and resume execution where the guest exited. 
+
+There are multiple steps involved. In the C++ vmexit handler, we do the following:
+
+
+<br>
+
+In HandleVmexit():
+```
+if (end_hypervisor)
+{
+	__writecr3(vcpu_data->guest_vmcb.save_state_area.Cr3.Flags);	// 1. Load guest CR3 context
+	__svm_vmload(vcpu_data->guest_vmcb_physicaladdr);	// 2. Load guest hidden context
+
+	__svm_stgi(); 3. Enable global interrupt flag
+	_disable();	4. Disable interrupt flag in EFLAGS (to safely disable SVM)
+
+	MsrEfer msr;
+
+	msr.flags = __readmsr(MSR::EFER);
+	msr.svme = 0;
+
+	__writemsr(MSR::EFER, msr.flags);	// 5. disable SVM
+	__writeeflags(vcpu_data->guest_vmcb.save_state_area.Rflags.Flags);	// 6. load the guest value of EFLAGS
+
+	guest_ctx->rcx = vcpu_data->guest_vmcb.save_state_area.Rsp;	// 7. restore these values later
+	guest_ctx->rbx = vcpu_data->guest_vmcb.control_area.NRip;
+
+	Logger::Get()->Log("ending hypervisor... \n");
+}
+
+return end_hypervisor;
+
+// ...
+```
+
+<br>
+
+After disabling virtualization, there is no more "guest" state; there is only the "host" processor state. We must resume execution from where the guest left off:
+
+<br>
+
+```
+	call HandleVmexit	; the C++ vmexit handler
+
+	;  omitted asm...
+
+	test al, al	; if return 1, then end VM
+
+	POPAQ	; 8. load the guest's general purpose register context
+
+	; ...
+
+EndVm:
+	; in HandleVmexit, rcx is set to guest stack pointer, and rbx is set to guest RIP
+	; but guest state is already ended so we continue execution as host
+
+	mov rsp, rcx	; 9. load guest stack
+
+	jmp rbx			; 10. resume execution from where the guest exited
+
+LaunchVm endp
+```
 
 <br>
 
@@ -344,9 +399,7 @@ To stop the virtual machine, we do the following:
 
 &emsp;&emsp;Most of the time, I just used OSRLoader to test my hypervisor, which worked flawlessly. However, when I attempted to launch the hypervisor with KDMapper, I got the following VMWare error:
 
-[VMWARE_PICTURE_HERE]
-
-![Alt text](../assets/img/kdmapperfault1.PNG "Title")
+![Alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/kdmapperfault1.PNG "Title")
 
 &emsp;&emsp;Unfortunately, there was no crash dump, so I was unable to gather any useful information. I was confused as to why there were no similar issues with OSRLoader. There were two things I was certain of: First, the hypervisor launched successfully on all cores, and second, the crash occurred some time after I exited my driver. To learn more about this KDMapper issue, I wanted to see what happened when I triggered a vmexit before exiting DriverEntry, and what happened when I did that outside of the driver. I placed a breakpoint after vmrun, to catch vmexits:
 
