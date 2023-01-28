@@ -105,8 +105,8 @@ bool IsSvmUnlocked()
 	return true;
 }
 ```
-
-
+<br>
+<br>
 *Finally, we can enable AMD SVM for this core*
 ```
 enum MSR : UINT64
