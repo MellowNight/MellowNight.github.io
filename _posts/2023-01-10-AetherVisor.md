@@ -25,10 +25,10 @@ Before any VM initialization, three conditions must be met:
 2. Virtualization must be enabled in BIOS, so that VM_CR.SVMDIS can be set to 0 and VM_CR.LOCK can be locked.
 3. The MSR_EFER.svme bit is set, after conditions #1 and #2 are met.
 <br> 
+<br> 
 
 *First, check if AMD SVM is supported*
 
-<br> 
 <br> 
 ```cpp
 enum CPUID
@@ -74,8 +74,12 @@ bool IsSvmSupported()
 	return true;
 }
 ```
+<br> 
 
 *The VM_CR.LOCK bit will be locked to 1 if virtualization is disabled in BIOS, preventing you from changing the value of VM_CR.SVMDIS. If VM_CR.LOCK is already locked and VM_CR.SVMDIS is 1, then abort initialization. Otherwise, clear VM_CR.SVMDIS and set VM_CR.LOCK*
+
+<br> 
+
 
 ```cpp
 enum MSR : UINT64
