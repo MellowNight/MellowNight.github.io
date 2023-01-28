@@ -315,11 +315,11 @@ EnterVm:
 ```
 
 
-Once a #VMEXIT occurs, line 
+Once a #VMEXIT occurs, execution resumes and line 11 is reached.
 
+<br>
 
 To stop the virtual machine, we do the following:
-
 
 1. load guest state
 2. disable IF
@@ -330,6 +330,7 @@ To stop the virtual machine, we do the following:
 7. set RCX to RSP
 8. return and jump to RBX
 
+<br>
 
 ## Loading the hypervisor
 
