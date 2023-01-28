@@ -269,7 +269,9 @@ Boom, we've created a 1:1 gPA->hPA mapping for a page.
 
 
 The guest can invoke functions in the hypervisor by executing the vmmcall instruction with specific parameters. Based on the code in RCX, one of the following operations are executed:
+
 <br>
+
 ```cpp
 enum VMMCALL_ID : uintptr_t
 {
