@@ -262,7 +262,7 @@ Boom, we've created a 1:1 gPA->hPA mapping for a page.
 
 *This is basically the same as normal virtual->physical paging lol*
 
-[PICTURE HERE FOR SETUP]
+![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/NestedPagingSetup.png "Logo Title Text 1")
 
 ### vmmcall interface
 
