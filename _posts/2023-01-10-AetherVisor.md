@@ -6,25 +6,27 @@ date: 2023-01-19 01:01:01 -0000
 
 ## Introduction
 
-A while ago I wrote AetherVisor, a type-2 AMD hypervisor framework for stealthy dynamic analysis and memory hacking. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as deobfuscation. AetherVisor is a minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
+> A while ago I wrote AetherVisor, a type-2 AMD hypervisor framework for stealthy dynamic analysis and memory hacking. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as x86 deobfuscation. AetherVisor is a minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
 <br>
 <br> 
 
-This is a general overview of AetherVisor's implementation, with insight into some potential issues.
+> This is a general overview of AetherVisor's implementation, with insight into some potential issues.
+<br> 
 <br> 
 
 ## Virtual machine setup
 
 ### Loading the hypervisor
 
-Most of the time, I just used OSRLoader to test my hypervisor, which worked flawlessly. However, when I attempted to launch the hypervisor with KDMapper, I got the following VMWare error:
-
-
-
-Unfortunately, there was no crash dump, so I was unable to gather any useful information. I was really confused about why there were no similar issues with OSRLoader.
-
+> Most of the time, I just used OSRLoader to test my hypervisor, which worked flawlessly. However, when I attempted to launch the hypervisor with KDMapper, I got the following VMWare error:
 
 [VMWARE_PICTURE_HERE]
+
+![Alt text](../assets/img/kdmapperfault1.PNG "Title")
+
+> Unfortunately, there was no crash dump, so I was unable to gather any useful information. I was really confused about why there were no similar issues with OSRLoader.
+
+
 
 Two things I am sure of are that the hypervisor launched successfully on all cores, and To understand more about the KDMapper crash, I set a breakpoint
 
