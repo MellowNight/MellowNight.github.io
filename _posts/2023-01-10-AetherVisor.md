@@ -264,6 +264,8 @@ Boom, we've created a 1:1 gPA->hPA mapping for a page.
 
 ![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/NestedPagingSetup.png "Logo Title Text 1")
 
+<br>
+
 ### vmmcall interface
 
 
