@@ -285,7 +285,9 @@ enum VMMCALL_ID : uintptr_t
     start_branch_trace = 0x11111119,
 };
 ```
+
 <br>
+
 Wrapper functions for the vmmcall interface are provided by Aethervisor-api.lib. You can use it by including Aether api.h and the static library in your project.
 
 <br>
