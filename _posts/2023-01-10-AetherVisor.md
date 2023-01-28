@@ -214,7 +214,7 @@ void HandleMsrExit(VcpuData* core_data, GuestRegisters* guest_regs)
 &emsp;&emsp;EasyAntiCheat and Battleye write to unimplemented MSRs to try and trigger undefined behavior while running under the hypervisor, so I inject #GP(0) when the guest writes to an MSR outside the manual's specified ranges.
 
 <br>
-
+ 
 *Preventing crashes from unimplemented MSR access*
 
 <br>
@@ -261,7 +261,6 @@ Boom, we've created a 1:1 gPA->hPA mapping for a page.
 <br>
 
 *This is basically the same as normal virtual->physical paging lol*
-
 
 [PICTURE HERE FOR SETUP]
 
@@ -423,40 +422,41 @@ In this second section, I will explain the implementation details of features pr
 ### Nested Page Table hooks
 
 
-&emsp;&emsp;The principle of EPT/NPT stealth hooking is based off of the ability to intercept memory accesses to pages. Page permission based hooking techniques have been used for decades, from guard page hooking to nehalem TLB-split hooking. 
+&emsp;&emsp;EPT/NPT hooking is a technique to hide inline hooks, by intercepting and redirecting memory reads to a different page. 
 
+<br>
 
-&emsp;&emsp;Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can then handle an EPT fault caused by an attempted read from the page, point the EPT's pfn to the hookless page, and set the memory to read/write only. This memory read trapping mechanism effectively hides byte patches from security systems such as patchguard and Battleye. The hooked copy of this page is restored 
-once the VMM intercepts an attempted execute on the read/write only mapping of the page.
-
+&emsp;&emsp;Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can handle EPT faults caused by attempted reads from the page, and redirect the read to the copy page. The hooked page is restored on EPT faults thrown by instruction fetches from the page. 
 
 [Intel EPT hook diagram here]
 
+&emsp;&emsp;AMD nested page tables do not support the execute-only permission, so AMD system programmers might need to trap every execute access to the hook page, which causes overhead. Two workarounds can be considered if you really want execute only pages:
 
-AMD nested page tables do not support execute-only pages, so AMD system programmers would need to trap every execute access to the hook page, causing a lot of overhead. Two workarounds can be considered if you really want execute only pages:
-
+<br>
 
 **SEV-SNP (secure nested paging):** pages in the guest can be restricted to execute-only with VMPL permission masks in the RMP (reverse map table). These RMP permission checks are only in effect when SEV-SNP is enabled. See AMD system programming manual sections 15.36.3 to 15.36.5.  
-
       
-
 **Memory Protection Keys:** execute-only memory can be achieved with with MPK by disabling read access
 through the PKRU register and allowing execution through the page table. Memory protection keys control read and write access to pages, but ignore instruction fetches. See AMD system programming manual section 5.6.7.
     
-Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I needed to somehow hide my hooks by trapping executes on pages.
+<br>
 
-To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Whenever we execute the hooked page, #NPF is thrown and we enter into the **"shadow"** ncr3. The processor switches back to **"primary"** ncr3 whenever RIP goes outside of the hooked page.
+Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I needed to somehow hide hooks by trapping on execute.
+
+<br>
+
+&emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Whenever we execute the hooked page, #NPF is thrown and we enter into the **"shadow"** ncr3. The processor switches back to **"primary"** ncr3 whenever RIP goes outside of the hooked page.
 
 
 *This how [an NPT hook(link to setnpthook)]is set up:*
 **[AMD NPT hook diagram here, WITH STEPS!!!]**
 
-1. __writecr3() to attach to the process cr3 saved in VMCB
-2. Make a NonPagedPool copy of the target page 
-3. copy the hook shellcode to copied page + hook page offset.    
+1. __writecr3() to attach to the process context saved in VMCB
+2. Make a NonPagedPool **shadow** copy of the target page 
+3. Copy the hook shellcode to copy page + hook page offset.    
 4. Give rwx permissions to the nPTE of the copy page, in **"shadow"** ncr3
 5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
-6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
+6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. *If the hooked page is paged out, then your NPT hook will redirect execution on some unknown memory page!!!*
 
 One problem was caused by Windows' KVA shadowing feature, which created two page directories for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where AetherVisor's code wasn't even mapped.
 
