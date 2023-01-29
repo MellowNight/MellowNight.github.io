@@ -34,7 +34,7 @@ author: MellowNight
 
 <br>
 
-&emsp;&emsp;I wanted to hide from more than just DLL certificate checks, and I didn't want to rely on RWX dlls, which are pretty uncommon. Why not just abuse the far more common "RX" sections (i.e. the .text section) instead?
+I wanted to hide from more than just DLL certificate checks, and I didn't want to rely on RWX dlls, which are pretty uncommon. Why not just abuse the far more common "RX" sections (i.e. the .text section) instead?
 
 <br>
 
@@ -102,7 +102,7 @@ HHOOK SetWindowsHookExA(
 
 <br>
 
-&emsp;&emsp;The first problem is that some DLLs will unload themselves when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL. We don't need to execute the entry point, we just need the DLL to be loaded. 
+The first problem is that some DLLs will unload themselves when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL. We don't need to execute the entry point, we just need the DLL to be loaded. 
 
 <br> 
 
@@ -112,7 +112,7 @@ HHOOK SetWindowsHookExA(
 
 ### Manually mapping our payload DLL
 
-After loading the host DLL, we prepare our payload DLL for manual mapping like any other injector. This includes remapping sections to their relative virtual addresses, resolving relocations, and resolving imports. In this next section, we'll go over how our own payload DLL is mapped to the target process.
+&emsp;&emsp;After loading the host DLL, we prepare our payload DLL for manual mapping like any other injector. This includes remapping sections to their relative virtual addresses, resolving relocations, and resolving imports. In this next section, we'll go over how our own payload DLL is mapped to the target process.
 
 <br>
 
@@ -122,7 +122,7 @@ After loading the host DLL, we prepare our payload DLL for manual mapping like a
 
 <br>
 
-&emsp;&emsp;Our objective here is to map the entire payload inside of the NPT hook shadow pages. This way, our DLL memory will only be visible while it is executing.
+The objective here is to map the entire payload inside of the NPT hook shadow pages. This way, our DLL memory will only be visible while it is executing.
 
 <br>
 
@@ -161,31 +161,49 @@ Here's how Driver::SetNptHook maps in a page from our DLL:
 
 <br>
 
-Upon executing the RW-only regions in the host DLL, #NPF will be thrown, causing the hypervisor to switch to the shadow nCR3 and revealing the payload DLL. When RIP leaves the memory range of our payload DLL, another #NPF is thrown, causing the hypervisor to switch back to the primary nCR3, hiding the payload.
+&emsp;&emsp;Upon executing the RW-only regions in the host DLL, #NPF will be thrown, causing the hypervisor to switch to the shadow nCR3 and revealing the payload DLL. When RIP leaves the memory range of our payload DLL, another #NPF is thrown, causing the hypervisor to switch back to the primary nCR3, hiding the payload.
 
 <br>
 
 #### Calling the entry point
 
-We are going to use SetWindowsHookEx again to call the entry point for our hidden DLL. [Earlier](#setwindowshookex---loading-the-host-dll), I mentioned a potential problem caused by SetWindowsHookEx automatically calling the entry point. 
+&emsp;&emsp;We are going to use SetWindowsHookEx again to invoke the entry point for our hidden DLL. [Earlier](#setwindowshookex---loading-the-host-dll), I mentioned a potential problem caused by SetWindowsHookEx automatically calling the entry point of the host DLL (OWClient.dll).
 
 <br>
 
 Another problem is that OWClient.dll's entry point crashes, because it tries to access Overwolf data that isn't present.
 
-
+<br>
 
 ### Why I'm unable to hide the entire DLL
 
-After hiding the entire DLL, calling API functions such as LoadLibrary() causes access violations. Why is that? Let's investigate the crash:
+&emsp;&emsp;After hiding the entire DLL, calling some API functions causes access violations. Why is that? Let's investigate the crash:
+
+<br>
+
+[CHEAT ENGINE SCREENSHOT HERE]
+
+<br>
+
+Here, we can see that LoadLibrary() crashes when It tries to access a string inside our DLL. This is probably because the .rdata and .data sections of our DLL is completely hidden, so our strings and other variables are not accessible to DLL dependencies. This means that I'm unable to hide the entire DLL; .rdata and .data must be visible for some other DLLs, such as kernel32.dll and ntdll.dll. We can't hide .rdata, but we also can't simply write .rdata to read-only sections of the OWClient; that would violate integrity checks. 
+
+<br>
+
+The only solution is to align the .rdata of our payload DLL with the .data section of OWClient, and map our payload to **(OWClient.dll + overwolf_data_section_rva) - payload_rdata_section_rva**. Unfortunately, now the only sections that can be hidden are PE headers, .text, and .idata, which come before .rdata.
+
+<br>
+
+[RDATA ALIGNMENT DIAGRAM HERE:]
 
 
-It turns out that since the .rdata 
-
+<br>
 
 ## Limitations & Alternative ideas
 
 2D injector has two issues:
-- Performance: Every API call, exception, and syscall will throw #NPF and trigger an nCR3 switch. This caused a noticeable FPS drop when running internal cheats.
+
+<br>
+
+- Performance: Every API call, exception, and syscall triggers an #NPF vmexit. Not only that, but vmexit is also triggered every time a hidden hook is executed. The frequent vmexits caused a noticeable FPS drop with some of my internal cheats. 
 - Detection: The .rdata and .data sections are exposed, and can be scanned for suspicious strings. This can be partially fixed by encrypting .rdata strings, but some other suspicious data structures can't easily be encrypted.
 
