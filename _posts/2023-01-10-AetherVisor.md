@@ -598,10 +598,10 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-![**Qiling**](https://github.com/qilingframework/qiling) **and** ![**Speakeasy**](https://github.com/mandiant/speakeasy): Uses a CPU emulator to intercept API calls, memory access, and more
-![**KACE:**](https://github.com/waryas/KACE) Intercepts access to DLLs and system modules by blocking access to the DLLs, and using an exception handler to redirect access
+[**Qiling**](https://github.com/qilingframework/qiling) **and** [**Speakeasy**](https://github.com/mandiant/speakeasy): Uses a CPU emulator to intercept API calls, memory access, and more
+[**KACE:**](https://github.com/waryas/KACE) Intercepts access to DLLs and system modules by blocking access to the DLLs, and using an exception handler to redirect access
 
-![**Simpleator:**](https://github.com/ionescu007/Simpleator) Uses the Hyper-V API to create an isolated guest address space and logs Winapi calls
+[**Simpleator:**](https://github.com/ionescu007/Simpleator) Uses the Hyper-V API to create an isolated guest address space and logs Winapi calls
 
 <br>
 
