@@ -498,6 +498,16 @@ In this last section, I will explain the implementation details of features prov
 
 <br>
 
+*What happened to the mov instruction at 0:29? 😳*
+
+<br>
+
+<p align="center">
+	<video src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/ShootergameNptTest.mp4"></video>
+</p>
+
+<br>
+
 &emsp;&emsp;Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can handle EPT faults caused by attempted reads from the page, and redirect the read to the copy page. The hooked page is restored on EPT faults thrown by instruction fetches from the page. 
 <br>
 
