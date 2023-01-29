@@ -13,14 +13,13 @@ author: MellowNight
   * [Setting up the VMCB](#setting-up-the-vmcb)
   * [MSR intercepts](#msr-intercepts)
   * [Setting up nested paging](#setting-up-nested-paging)
-    + [Here's how to set up an nested page directory with identity mapping:](#here-s-how-to-set-up-an-nested-page-directory-with-identity-mapping-)
   * [vmmcall interface](#vmmcall-interface)
   * [VM launch and VM exit operation](#vm-launch-and-vm-exit-operation)
   * [Stopping the hypervisor](#stopping-the-hypervisor)
 - [Loading the hypervisor](#loading-the-hypervisor)
 - [Features](#features)
   * [Nested Page Table hooks](#nested-page-table-hooks)
-    + [Really annoying problems](#it-took-an-absurd-amount-of-time-to-get-the-npt-hooking-feature-to-work-properly-i-spent-months-figuring-out-how-to-fix-some-nasty-bugs-)
+    + [Really annoying problems](#really-annoying-problems)
   * [Sandboxing](#sandboxing)
     + [Intercepting out-of-sandbox code execution](#intercepting-out-of-sandbox-code-execution)
     + [Intercepting out-of-sandbox memory access](#intercepting-out-of-sandbox-memory-access)
@@ -31,6 +30,7 @@ author: MellowNight
 
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
+<br>
 <br>
 
 ## Introduction
@@ -571,8 +571,9 @@ The following steps describe how the NPT hook is set:
 
 
 <br>
+#### Really annoying problems
 
-#### It took an absurd amount of time to get the NPT hooking feature to work properly. I spent months figuring out how to fix some nasty bugs: 
+It took an absurd amount of time to get the NPT hooking feature to work properly. I spent months figuring out how to fix some nasty bugs: 
 
 <br>
 

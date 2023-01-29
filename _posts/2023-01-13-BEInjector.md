@@ -139,7 +139,7 @@ for (offset = cheat_mapped; offset < cheat_mapped + cheat_size; offset += PAGE_S
 
 <br>
 
-*NOTE: spamming #VMEXIT in a loop like this could lead to a CLOCK_WATCHDOG_TIMEOUT, if the SetNptHook() routine isn't well optimized enough.*
+*NOTE: spamming #VMEXIT in a loop like this could lead to a CLOCK_WATCHDOG_TIMEOUT, if the vmexit handler for SetNptHook() isn't well optimized enough.*
 
 <br>
 
@@ -163,15 +163,21 @@ Here's how Driver::SetNptHook maps in a page from our DLL:
 
 Upon executing the RW-only regions in the host DLL, #NPF will be thrown, causing the hypervisor to switch to the shadow nCR3 and revealing the payload DLL. When RIP leaves the memory range of our payload DLL, another #NPF is thrown, causing the hypervisor to switch back to the primary nCR3, hiding the payload.
 
+<br>
+
 #### Calling the entry point
 
 We are going to use SetWindowsHookEx again to call the entry point for our hidden DLL. [Earlier](#setwindowshookex---loading-the-host-dll), I mentioned a potential problem caused by SetWindowsHookEx automatically calling the entry point. 
 
-Another problem problem is that OWClient.dll's entry point crashes, because it tries to access Overwolf data that isn't present.
+<br>
+
+Another problem is that OWClient.dll's entry point crashes, because it tries to access Overwolf data that isn't present.
+
+
 
 ### Why I'm unable to hide the entire DLL
 
-Why are WinAPI functions crashing!?
+ Random API functions are causing crashes, because 
 
 ## Limitations & Alternative ideas
 
