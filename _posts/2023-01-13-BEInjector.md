@@ -66,7 +66,7 @@ This post will go over the process of injecting a DLL and making its memory most
 
 <br>
 
-[INSERT OWCLIENT PICTURE HERE]
+[INSERT OWCLIENT CFF PICTURE HERE]
 
 <br>
 
