@@ -424,14 +424,20 @@ LaunchVm endp
 <br>
 
 <p align="center">
-  <img width="460" height="300" src="../assets/img/kdmapperfault2.PNG">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/kdmapperfault2.PNG">
 </p>
 
 <br>
 
 &emsp;&emsp;I vmmcall'ed the hyperivsor before returning from DriverEntry, and then I executed vmmcall from a 2nd driver. The breakpoint I placed right after vmrun should've been hit twice, but only one breakpoint was hit before the crash.
 
-[WINDBG_PIC_HERE]
+<br>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/kdmapperfault3.PNG">
+</p>
+
+<br>
 
 &emsp;&emsp;This must mean that the vmexit handler is somehow fked up after DriverEntry returns! If the breakpoint on vmexit is not being reached, and the exception handlers crash without double fault or bluescreen, I can assume that either the segments are messed up, or no code is mapped to the CR3 context. 
 
