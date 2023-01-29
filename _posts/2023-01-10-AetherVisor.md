@@ -536,15 +536,15 @@ It took an absurd amount of time to get the NPT hooking feature to work properly
 
 <br>
 
-**Hooking copy-on-write pages:**  I wanted to NPT hook functions in ntdll.dll and kernel32.dll, but setting an NPT hook does not trigger COW. why the fuck did I spend 2 weeks trying to point guest PTE to a second copy of the hook page? It was foolish of me to try and recreate COW instead of just normally triggering COW (see TriggerCOWAndPageIn() (link)). I even tried to hook the Windows MMU to prevent PFN inconsistency bugchecks 🤦‍♂️.
+**Hooking copy-on-write pages:**  I wanted to NPT hook functions in ntdll.dll and kernel32.dll, but setting an NPT hook does not trigger COW. why the fuck did I spend 2 weeks trying to point guest PTE to a copy of the hook page? I even went as far as to patch Windows memory management functions to prevent PFN inconsistency bugchecks 🤦‍♂️. It was foolish of me to try and recreate COW instead of just normally triggering COW (see TriggerCOWAndPageIn() (link)). 
 
 <br>
 
 ### Sandboxing 
 
+&emsp;&emsp;We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and dynamically instrument read, write, and execute memory accesses. This serves as the basis for some EDR, software containerization, or RE/dynamic analysis solutions. KVM's EPT/NPT support is used by Intel Kata and Docker Desktop to isolate containers. The concept behind AetherVisor's NPT sandbox is similar to Bromium's LAVA tool. 
 
-&emsp;&emsp;We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and control read, write, and execute access coming from the region. This serves as the basis for some current EDR, software containerization, or reverse engineering/dynamic analysis solutions. KVM's EPT/NPT capability is used by Intel Kata and Docker Desktop to isolate containers. The concept behind AetherVisor's NPT sandbox is similar to Bromium's LAVA tool. 
-
+<br>
 
 #### intercepting out-of-module execution
 
