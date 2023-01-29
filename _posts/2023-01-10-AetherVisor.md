@@ -416,7 +416,10 @@ LaunchVm endp
   <img width="460" height="300" src="(https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/kdmapperfault1.PNG">
 </p>
 &emsp;&emsp;Unfortunately, there was no crash dump, so I was unable to gather any useful information. I was confused as to why there were no similar issues with OSRLoader. There were two things I was certain of: First, the hypervisor launched successfully on all cores, and second, the crash occurred some time after I exited my driver. To learn more about this KDMapper issue, I wanted to see what happened when I triggered a vmexit before exiting DriverEntry, and what happened when I did that outside of the driver. I placed a breakpoint after vmrun, to catch vmexits:
-
+![Alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/kdmapperfault1.PNG "Title")
+<p align="center">
+  <img width="460" height="300" src="(https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/kdmapperfault1.PNG">
+</p>
 [ASM_CODE_PICTURE_HERE]
 
 &emsp;&emsp;I vmmcall'ed the hyperivsor before returning from DriverEntry, and then I executed vmmcall from a 2nd driver. The breakpoint I placed right after vmrun should've been hit twice, but only one breakpoint was hit before the crash.
