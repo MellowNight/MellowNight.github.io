@@ -20,7 +20,7 @@ author: MellowNight
 - [Loading the hypervisor](#loading-the-hypervisor)
 - [Features](#features)
   * [Nested Page Table hooks](#nested-page-table-hooks)
-    + [Freezes, Hangs, and Crashes](#it-took-an-absurd-amount-of-time-to-get-the-npt-hooking-feature-to-work-properly-i-spent-months-figuring-out-how-to-fix-some-nasty-bugs-)
+    + [Some annoying problems](#it-took-an-absurd-amount-of-time-to-get-the-npt-hooking-feature-to-work-properly-i-spent-months-figuring-out-how-to-fix-some-nasty-bugs-)
   * [Sandboxing](#sandboxing)
     + [Intercepting out-of-sandbox code execution](#intercepting-out-of-sandbox-code-execution)
     + [Intercepting out-of-sandbox memory access](#intercepting-out-of-sandbox-memory-access)
