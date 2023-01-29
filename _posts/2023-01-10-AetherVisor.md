@@ -550,7 +550,7 @@ It took an absurd amount of time to get the NPT hooking feature to work properly
 
 #### Intercepting out-of-sandbox code execution
 
-AetherVisor's sandbox feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3, used for NPT hooks. Whenever RIP leaves a sandbox region, the following events occur:
+&emsp;&emsp;AetherVisor's sandbox feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3, used for NPT hooks. Whenever RIP leaves a sandbox region, the following events occur:
 
 
 <br>
@@ -561,6 +561,8 @@ AetherVisor's sandbox feature isolates a memory region by disabling execute for 
 4. All registers are saved
 5. guest execution resumes at the callback, in **primary"** context
 
+[INSERT SANDBOX EXECUTE LOG PICTURE HERE]
+
 <br>
 
 This mechanism can be used to log the exceptions thrown or APIs called by a DLL.
@@ -569,7 +571,7 @@ This mechanism can be used to log the exceptions thrown or APIs called by a DLL.
 
 #### Intercepting out-of-sandbox memory access
 
-I wasn't able intercept every single memory read and write, because guest page table walks caused #NPF. I could only log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"all access"**, with every page mapped as RWX, to handle read/write instructions. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
+&emsp;&emsp;I wasn't able intercept every single memory read and write, because guest page table walks caused #NPF. I could only log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"all access"**, with every page mapped as RWX, to handle read/write instructions. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
 
 <br>
 
@@ -582,10 +584,11 @@ I wasn't able intercept every single memory read and write, because guest page t
 6. All registers are saved
 7. guest execution resumes at the callback, in **"Primary"** context
 
-[INSERT SANDBOX EXECUTE LOG PICTURE HERE]
+[INSERT SANDBOX READ/WRITE LOG PICTURE HERE]
+
 <br>
 
-This can be used to figure out the detection vectors of an anti-cheat, i.e. what mapped driver traces they look for.
+This could be used to figure out detection vectors of an anti-cheat, such as the mapped driver traces they look for.
 
 <br>
 
@@ -594,25 +597,34 @@ This can be used to figure out the detection vectors of an anti-cheat, i.e. what
 Other projects use different methods to emulate pieces of code in a sandboxed environment, such as:
 <br>
 
-**Qiling and Speakeasy: **  Using a CPU emulator to intercept API calls, memory access, and more
-**KACE: ** Intercepting access to DLLs and system modules using an exception handler
-**Simpleator: ** Using Hyper-V API to create an isolated guest address space and logging Winapi calls
+**Qiling and Speakeasy:**  Using a CPU emulator to intercept API calls, memory access, and more
+
+**KACE:** Intercepts access to DLLs and system modules by blocking access to the DLLs, and using an exception handler to redirect access
+
+**Simpleator:** Uses the Hyper-V API to create an isolated guest address space and logs Winapi calls
 <br>
 
-AetherVisor provides an advantage over these projects as it allows code to be sandboxed on-the-fly on real systems, without the need for emulating startup code, or setting up a fabricated system environment. Thus, AetherVisor the only solution feasible for analyzing complex software with many parts.
+&emsp;&emsp;AetherVisor provides an advantage over these projects as it allows code to be sandboxed on-the-fly on real systems, without the need for emulating startup code, or setting up a fabricated system environment. Thus, AetherVisor is the only solution feasible for analyzing stateful software with multiple parts.
 <br>
 
 ### Branch Tracing
 
-The branch tracing feature in AetherVisor uses a combination of Last Branch Record (LBR) and Branch Trap Flag (BTF), to notify the VMM whenever a branch is executed.
+&emsp;&emsp;The branch tracing feature in AetherVisor uses a combination of Last Branch Record (LBR) and Branch Trap Flag (BTF), to notify the VMM whenever a branch is executed.
 
-The problem with my implementation is that #DB is thrown on every branch, causing a lot of overhead. I thought of collecting branch information in the LBR stack instead of single-stepping every branch, but there's no way to signal when the LBR stack is full on AMD :((((. I considered using Lightweight Profiling (LWP), which has a lot more fine-grained controls for tracing instructions, but it only profiles usermode instructions. Nevertheless, LWP is still a useful feature that can be added later.
+<br>
 
-When I wanted to test branch tracing, I struggled for hours due to the way VMware and Windows messed with the debugctl MSR.
+&emsp;&emsp;The problem with my implementation is that #DB is thrown on every branch, causing a lot of overhead. I thought of collecting branch information in the LBR stack instead of single-stepping every branch, but on AMD, there's no way to signal when the LBR stack is full 😔😔. I considered using Lightweight Profiling (LWP), which has a lot more fine-grained controls for tracing instructions, but it only works in usermode. Still, LWP is a useful feature that can be added later.
+
+<br>
+
+When I wanted to test branch tracing, I struggled for hours due to the way VMware and Windows messed with the debugctl MSR. 
 
 First of all, VMware was forcing all debugctl bits to 0, which meant that I had to do some testing outside of VMware. 
-
+<br>
 Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). In this manner, Windows manages extended debug features, and my changes this debugctl are essentially ignored. 
+<br>
+
+
 
 ### Process-specific syscall hooks
 
