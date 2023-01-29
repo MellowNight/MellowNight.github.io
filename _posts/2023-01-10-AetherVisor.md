@@ -547,7 +547,8 @@ It took an absurd amount of time to get the NPT hooking feature to work properly
 
 <br>
 
-#### intercepting out-of-module execution
+
+#### Intercepting out-of-sandbox code execution
 
 AetherVisor's sandbox feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3, used for NPT hooks. Whenever RIP leaves a sandbox region, the following events occur:
 
@@ -566,11 +567,10 @@ This mechanism can be used to log the exceptions thrown or APIs called by a DLL.
 
 <br>
 
+#### Intercepting out-of-sandbox memory access
 
-#### intercepting out-of-module memory access
+I wasn't able intercept every single memory read and write, because guest page table walks caused #NPF. I could only log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"all access"**, with every page mapped as RWX, to handle read/write instructions. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
 
-
-I didn't figure out how to log every single memory read and write, because guest page table walks involved reading and writing. I could only properly log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"all access"**, with every page mapped as RWX. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
 <br>
 
 1. #NPF is thrown
@@ -581,6 +581,11 @@ I didn't figure out how to log every single memory read and write, because guest
 5. Execute destination is pushed onto the stack; the instrumentation callback will return to this address
 6. All registers are saved
 7. guest execution resumes at the callback, in **"Primary"** context
+
+[INSERT SANDBOX EXECUTE LOG PICTURE HERE]
+<br>
+
+This can be used to figure out the detection vectors of an anti-cheat, i.e. what mapped driver traces they look for.
 
 <br>
 
