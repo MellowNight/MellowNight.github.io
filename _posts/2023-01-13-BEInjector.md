@@ -2,6 +2,7 @@
 layout: post
 title: "2D injector - hiding DLLs with nested page tables"
 date: 2023-01-10 02:02:02 -0000
+author: MellowNight
 ---
 
 - [Introduction](#introduction)
@@ -39,23 +40,22 @@ date: 2023-01-10 02:02:02 -0000
 
 <br>
 
-This post will go over the process of injecting a DLL and making its memory mostly invisible through nested page table manipulation. 
+This post will go over the process of injecting a DLL and making its memory mostly invisible through nested page table (NPT) manipulation.
 
 <br>
-
-&emsp;&emsp;
-
-<br>
-
-*It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol*
 
 [INSERT VIDEO HERE]
 
 <br>
 
+*It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol*
+
+
+<br>
+
 ## Finding the right host DLL
 
-&emsp;&emsp;I will refer to the signed DLL that hosts our own manually mapped DLL as the "host dll". Our only two requirements for a host dll are that:
+&emsp;&emsp;I will refer to the signed DLL that hosts our own manually mapped DLL as the **"host dll"**. Our only two requirements for a host dll are that:
 
 <br>
 
@@ -74,7 +74,7 @@ This post will go over the process of injecting a DLL and making its memory most
 
 <br>
 
-*"[SetWindowsHookEx]Installs an application-defined hook procedure into a hook chain. You would install a hook procedure to monitor the system for certain types of events. These events are associated either with a specific thread or with all threads in the same desktop as the calling thread ... SetWindowsHookEx can be used to inject a DLL into another process."*
+*"[SetWindowsHookEx] Installs an application-defined hook procedure into a hook chain. You would install a hook procedure to monitor the system for certain types of events. These events are associated either with a specific thread or with all threads in the same desktop as the calling thread ... SetWindowsHookEx can be used to inject a DLL into another process."*
 
 <br>
 
@@ -96,7 +96,7 @@ HHOOK SetWindowsHookExA(
 
 <br>
 
-&emsp;&emsp;SetWindowsHookEx loads the DLL into the process that owns the thread with the id dwThreadId, and then calls the hook routine pointed to by lpfn.  The documentation doesn't mention that it automatically calls the entry point. The entry point will cause problems later down the line. 
+&emsp;&emsp;SetWindowsHookEx loads the DLL into the process that owns the thread with the ID dwThreadId, and then calls the hook routine specified by lpfn. The documentation doesn't mention that it also automatically calls the entry point. The entry point will cause crashes later down the line. 
 
 <br>
 
@@ -110,13 +110,13 @@ HHOOK SetWindowsHookExA(
 
 ## Manually mapping our payload DLL
 
-After loading the host DLL, we prepare our payload DLL for manual mapping like any other injector. This involves remapping sections to their relative virtual addresses, resolving relocations, and resolving imports. In this next section, we'll go over how the payload is hidden from anti-cheat memory scans.
+After loading the host DLL, we prepare our payload DLL for manual mapping like any other injector. This includes remapping sections to their relative virtual addresses, resolving relocations, and resolving imports. In this next section, we'll go over how the payload is hidden from anti-cheat memory scans.
 
 <br>
 
 ### Nested Page Table hooks - review
 
-&emsp;&emsp;AetherVisor's a Nested page table (NPT) hook feature will create a shadow copy of a page, that is mapped in instead of the original page when RIP enters the page. My implementation of NPT hooking is described in more detail in my [AetherVisor writeup](https://mellownight.github.io/2023/01/19/AetherVisor.html)
+&emsp;&emsp;AetherVisor's NPT hook feature will create a shadow copy of a page that is only visible when RIP enters the page. My implementation of NPT hooking is described in more detail in my [AetherVisor writeup](https://mellownight.github.io/2023/01/19/AetherVisor.html)
 
 <br>
 
