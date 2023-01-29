@@ -177,7 +177,11 @@ Another problem is that OWClient.dll's entry point crashes, because it tries to 
 
 ### Why I'm unable to hide the entire DLL
 
- Random API functions are causing crashes, because 
+After hiding the entire DLL, calling API functions such as LoadLibrary() causes access violations. Why is that? Let's investigate the crash:
+
+
+It turns out that since the .rdata 
+
 
 ## Limitations & Alternative ideas
 
