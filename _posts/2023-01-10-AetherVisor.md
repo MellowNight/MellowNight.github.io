@@ -617,13 +617,13 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-When I wanted to test branch tracing, I struggled for hours due to the way VMware and Windows messed with the debugctl MSR. 
+&emsp;&emsp;When I wanted to test branch tracing, I struggled for hours due to the way VMware and Windows messed with the debugctl MSR. 
 
-First of all, VMware was forcing all debugctl bits to 0, which meant that I had to do some testing outside of VMware. 
+&emsp;&emsp;First of all, VMware was forcing all debugctl bits to 0, which meant that I had to do some testing outside of VMware. 
 <br>
-Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). In this manner, Windows manages extended debug features, and my changes this debugctl are essentially ignored. 
-<br>
+&emsp;&emsp;Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). In this manner, Windows manages extended debug features, and my changes this debugctl are essentially ignored. 
 
+<br>
 
 
 ### Process-specific syscall hooks
