@@ -22,7 +22,11 @@ date: 2023-01-10 02:02:02 -0000
 
 &emsp;&emsp;I wanted to hide from more than just DLL certificate checks, and I didn't want to rely on RWX dlls, which are pretty uncommon. Why not just abuse the far more common "RX" sections (i.e. the .text section) instead?
 
+<br>
+
 This post will go over the process of making a DLL's memory mostly invisible through nested page table manipulation. 
+
+<br>
 
 It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol
 
