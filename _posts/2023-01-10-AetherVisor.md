@@ -400,7 +400,7 @@ EndVm:
 
 	mov rsp, rcx	; 9. load guest stack
 
-	jmp rbx			; 10. resume execution from where the guest exited
+	jmp rbx		; 10. resume execution from where the guest exited
 
 LaunchVm endp
 ```
