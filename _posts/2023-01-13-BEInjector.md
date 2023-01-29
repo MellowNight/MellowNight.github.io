@@ -4,18 +4,18 @@ title: "2D injector - hiding DLLs with nested page tables"
 date: 2023-01-10 02:02:02 -0000
 author: MellowNight
 ---
-
 - [Introduction](#introduction)
 - [Overview](#overview)
-- [Finding the right host DLL](#finding-the-right-host-dll)
-- [SetWindowsHookEx - loading the host DLL](#setwindowshookex---loading-the-host-dll)
-- [Manually mapping our payload DLL](#manually-mapping-our-payload-dll)
-  * [Nested Page Table hooks - review](#nested-page-table-hooks---review)
-  * [Preventing OWClient from being called twice](#preventing-owclient-from-being-called-twice)
-- [can't call API functions](#can-t-call-api-functions)
+  * [Finding the right host DLL](#finding-the-right-host-dll)
+  * [SetWindowsHookEx - loading the host DLL](#setwindowshookex---loading-the-host-dll)
+  * [Manually mapping our payload DLL](#manually-mapping-our-payload-dll)
+    + [Nested Page Table hooks - review](#nested-page-table-hooks---review)
+    + [Preventing OWClient from being called twice](#preventing-owclient-from-being-called-twice)
+  * [Why are WinAPI functions crashing!?](#why-are-winapi-functions-crashing--)
 - [Alternative plans](#alternative-plans)
 
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
 
 
 <br>
@@ -53,7 +53,7 @@ This post will go over the process of injecting a DLL and making its memory most
 
 <br>
 
-## Finding the right host DLL
+### Finding the right host DLL
 
 &emsp;&emsp;I will refer to the signed DLL that hosts our own manually mapped DLL as the **"host dll"**. Our only two requirements for a host dll are that:
 
@@ -66,9 +66,11 @@ This post will go over the process of injecting a DLL and making its memory most
 
 &emsp;&emsp;I plugged Overwolf's signed OWClient.dll into my injector to use as a host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version x.x.x has a xxxkb .text section and a xxxkb .data section.
 
+[INSERT OWCLIENT PICTURE HERE]
+
 <br>
 
-## SetWindowsHookEx - loading the host DLL
+### SetWindowsHookEx - loading the host DLL
 
 &emsp;&emsp;We need to somehow remotely load the host DLL. After reversing Overwolf's DLL injection code, I found out that they use SetWindowsHookEx to inject their DLL. Lets take a look at the SetWindowsHookEx() function on MSDN:
 
@@ -108,13 +110,13 @@ HHOOK SetWindowsHookExA(
 
 <br>
 
-## Manually mapping our payload DLL
+### Manually mapping our payload DLL
 
 After loading the host DLL, we prepare our payload DLL for manual mapping like any other injector. This includes remapping sections to their relative virtual addresses, resolving relocations, and resolving imports. In this next section, we'll go over how the payload is hidden from anti-cheat memory scans.
 
 <br>
 
-### Nested Page Table hooks - review
+#### Nested Page Table hooks - review
 
 &emsp;&emsp;AetherVisor's NPT hook feature will create a shadow copy of a page that is only visible when RIP enters the page. My implementation of NPT hooking is described in more detail in my [AetherVisor writeup](https://mellownight.github.io/2023/01/19/AetherVisor.html)
 
@@ -150,11 +152,11 @@ Here's how we map a page of our DLL into the
 
 <br>
 
-### Preventing OWClient from being called twice
+#### Preventing OWClient from being called twice
 
 This is because OWClient.dll is context-aware, and tries to access Overwolf data that isn't present.
 
-## can't call API functions
+### Why are WinAPI functions crashing!?
 
 
 ## Alternative plans 
