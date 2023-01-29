@@ -519,23 +519,26 @@ The following steps describe how the NPT hook is set:
 
 <br>
 
-![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/NestedPagingSetup.png "Logo Title Text 1")
+![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/NptHookDiagram.png "Logo Title Text 1")
 
 
 <br>
 
-
-&emsp;&emsp;One problem was caused by Windows' KVA shadowing feature, which created two CR3 contexts for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where AetherVisor's code wasn't even mapped. Any process interfacing with AetherVisor must run as administrator to prevent this crash!
-
-
-
-**[AMD NPT hook diagram here, WITH STEPS!!!]**
-
+It took an absurd amount of time to get the NPT hooking feature to work properly. I spent months figuring out how to fix some nasty bugs: 
 
 <br>
 
-**When two adjacent pages have conflicting execute permissions, an #NPF might occur from an instruction split across the page boundary. This will cause an infinite #NPF loop, so you must figure out how to execute the entire instruction safely. I spent 24+ days debugging this!!*
+**Windows KVA shadowing crash:**  The KVA Shadow is a Windows mitigation for the "Meltdown" vulnerability. Two CR3 contexts are created for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the vmexit handler to crash, because the VMCB saved the usermode dirbase on vmexit, where AetherVisor's code wasn't even mapped. *Any process interfacing with AetherVisor must run as administrator to prevent this crash!*
 
+<br>
+
+**Split instruction hang/infinite loop:**  When two adjacent pages have conflicting execute permissions, an #NPF might occur from an instruction split across the page boundary. This will cause an infinite #NPF loop, because the instruction is never fully executable, so I had to figure out how to execute the entire instruction safely. (My current solution isn't optimal) I spent 24+ days debugging this!!*
+
+<br>
+
+**Hooking copy-on-write pages:**  I wanted to NPT hook functions in ntdll.dll and kernel32.dll, but setting an NPT hook does not trigger COW. why the fuck did I spend 2 weeks trying to point guest PTE to a second copy of the hook page? It was foolish of me to try and recreate COW instead of just normally triggering COW (see TriggerCOWAndPageIn() (link)). I even tried to hook the Windows MMU to prevent PFN inconsistency bugchecks 🤦‍♂️.
+
+<br>
 
 ### Sandboxing 
 
