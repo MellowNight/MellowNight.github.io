@@ -303,7 +303,7 @@ The final step of preparing for SVM operation is executing vmload to load hidden
 ```cpp
 ; omitted
 EnterVm:
-	mov	rax, [rsp]	; put physical address of guest VMCB in rax
+	mov rax, [rsp]	; put physical address of guest VMCB in rax
 
 	vmload rax		; vmload hidden guest state
 
@@ -315,8 +315,8 @@ EnterVm:
 
 	PUSHAQ			; save all guest general registers
 
-	mov rcx, [rsp + 8 * 16 + 2 * 8]		; pass virtual processor data ptr in arg 1
-	mov rdx, rsp					    ; pass guest registers in arg 2
+	mov rcx, [rsp + 8 * 16 + 2 * 8]	; pass virtual processor data ptr in arg 1
+	mov rdx, rsp					; pass guest registers in arg 2
 
 	; omitted code...
 
@@ -341,22 +341,32 @@ There are multiple steps involved. In the C++ vmexit handler, we do the followin
 In HandleVmexit():
 ```
 if (end_hypervisor)
-{
-	__writecr3(vcpu_data->guest_vmcb.save_state_area.Cr3.Flags);	// 1. Load guest CR3 context
-	__svm_vmload(vcpu_data->guest_vmcb_physicaladdr);	// 2. Load guest hidden context
+{	
+	// 1. Load guest CR3 context
+	__writecr3(vcpu_data->guest_vmcb.save_state_area.Cr3.Flags);
 
-	__svm_stgi(); 3. Enable global interrupt flag
-	_disable();	4. Disable interrupt flag in EFLAGS (to safely disable SVM)
+	// 2. Load guest hidden context
+	__svm_vmload(vcpu_data->guest_vmcb_physicaladdr);
+	
+	// 3. Enable global interrupt flag
+	__svm_stgi()
+	
+	// 4. Disable interrupt flag in EFLAGS (to safely disable SVM)
+	_disable()
 
 	MsrEfer msr;
 
 	msr.flags = __readmsr(MSR::EFER);
 	msr.svme = 0;
 
-	__writemsr(MSR::EFER, msr.flags);	// 5. disable SVM
-	__writeeflags(vcpu_data->guest_vmcb.save_state_area.Rflags.Flags);	// 6. load the guest value of EFLAGS
+	// 5. disable SVM
+	__writemsr(MSR::EFER, msr.flags);
 
-	guest_ctx->rcx = vcpu_data->guest_vmcb.save_state_area.Rsp;	// 7. restore these values later
+	// 6. load the guest value of EFLAGS
+	__writeeflags(vcpu_data->guest_vmcb.save_state_area.Rflags.Flags);	
+
+	// 7. restore these values later
+	guest_ctx->rcx = vcpu_data->guest_vmcb.save_state_area.Rsp;
 	guest_ctx->rbx = vcpu_data->guest_vmcb.control_area.NRip;
 
 	Logger::Get()->Log("ending hypervisor... \n");
@@ -369,7 +379,7 @@ return end_hypervisor;
 
 <br>
 
-After disabling virtualization, there is no more "guest" state; there is only the "host" processor state. We must resume execution from where the guest left off:
+After disabling virtualization, there is no more "guest" state; there is only the "host" processor state. We will resume execution from where the guest left off:
 
 <br>
 
