@@ -338,6 +338,7 @@ There are multiple steps involved. In the C++ vmexit handler, we do the followin
 <br>
 
 In HandleVmexit():
+<br>
 ```
 if (end_hypervisor)
 {	
@@ -442,7 +443,7 @@ LaunchVm endp
 
 <br>
 
-&emsp;&emsp;I vmmcall'ed the hyperivsor before returning from DriverEntry, and then I executed vmmcall from a 2nd driver. The breakpoint I placed right after vmrun should've been hit twice, but only one breakpoint was hit before the crash.
+&emsp;&emsp;I vmmcall'ed the hypervisor before returning from DriverEntry, and then I executed vmmcall from a 2nd driver. The breakpoint I placed right after vmrun should've been hit twice, but only one breakpoint was hit before the crash.
 
 <br>
 
@@ -498,7 +499,7 @@ Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, 
 
 <br>
 
-&emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** nCR3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Upon executing the hooked page, #NPF is thrown and the guest switches to the shadow nCR3 context. The guest switches back to primary nCR3 context whenever RIP goes outside of the hooked page.
+&emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** nCR3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **primary** nCR3 is used. Upon executing the hooked page, #NPF is thrown and the guest switches to the **shadow** nCR3 context. The guest switches back to **primary** nCR3 context whenever RIP goes outside of the hooked page.
 
 <br>
 
@@ -507,10 +508,10 @@ The following steps describe how the NPT hook is set:
 <br>
 
 1. __writecr3() to attach to the process context saved in VMCB
-2. Make a NonPagedPool shadow copy of the target page 
-3. Copy the hook shellcode to shadow page + hook page offset.    
-4. Give rwx permissions to the nPTE of the copy page, in shadow ncr3
-5. Set the nPTE permissions of the original target page to rw-only in primary (so that we can trap on execute access) 
+2. Make a NonPagedPool **shadow** copy of the target page 
+3. Copy the hook shellcode to **shadow** page + hook page offset.    
+4. Give rwx permissions to the nPTE of the copy page, in **shadow** ncr3
+5. Set the nPTE permissions of the original target page to rw-only in **primary** (so that we can trap on execute access) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. *If the hooked page is paged out, then your NPT hook will redirect execution on some unknown memory page!!!*
 
 <br>
@@ -542,33 +543,35 @@ It took an absurd amount of time to get the NPT hooking feature to work properly
 
 ### Sandboxing 
 
-&emsp;&emsp;We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and dynamically instrument read, write, and execute memory accesses. This serves as the basis for some EDR, software containerization, or RE/dynamic analysis solutions. KVM's EPT/NPT support is used by Intel Kata and Docker Desktop to isolate containers. The concept behind AetherVisor's NPT sandbox is similar to Bromium's LAVA tool. 
+&emsp;&emsp;We just saw how we can mess with EPT/NPT entries to manipulate data exposed to the guest; you can also isolate memory regions and dynamically instrument read, write, and execute memory accesses. This serves as the basis for some EDR, software containerization, or RE/dynamic analysis solutions. For example, [Docker Desktop](https://docs.docker.com/desktop/faqs/linuxfaqs/#why-does-docker-desktop-for-linux-run-a-vm) uses KVM's EPT/NPT functionality to isolate containers. The concept behind AetherVisor's NPT sandbox is similar to that of [Alex Ionescu's Simpleator](https://github.com/ionescu007/Simpleator).  
 
 <br>
 
 #### intercepting out-of-module execution
 
+AetherVisor's sandbox feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3, used for NPT hooks. Whenever RIP leaves a sandbox region, the following events occur:
 
-AetherVisor's sandboxing feature isolates a memory region by disabling execute for its pages in the **"Primary"** nCR3 context. The sandboxed pages behave the same way as NPT hooked pages, but a third nCR3, named **"sandbox"**, is used for sandboxed pages instead of the **"shadow"** nCR3. Whenever RIP leaves a sandbox region, the following events occur:
 
-
+<br>
 1. #NPF is thrown
-2. Switch from **"sandbox"** context -> **"Primary"** context
+2. Switch from **sandbox** context -> **primary** context
 2. VMM sets RIP to a user-registered callback
 3. Execute destination is pushed onto the stack; the instrumentation callback will return to this address
 4. All registers are saved
-5. guest execution resumes at the callback, in **"Primary"** context
+5. guest execution resumes at the callback, in **primary"** context
 
 <br>
 
-This mechanism can be used to log the APIs called or exceptions thrown by a module.
+This mechanism can be used to log the exceptions thrown or APIs called by a DLL.
+
+<br>
 
 
 #### intercepting out-of-module memory access
 
 
 I didn't figure out how to log every single memory read and write, because guest page table walks involved reading and writing. I could only properly log reads and writes by denying read/write permissions on specific pages. I had to set up a fourth nCR3: **"all access"**, with every page mapped as RWX. Whenever a read/write instruction in the sandbox is blocked, the following events occur:
-
+<br>
 
 1. #NPF is thrown
 2. Switch to special **"all access"** context
@@ -579,20 +582,20 @@ I didn't figure out how to log every single memory read and write, because guest
 6. All registers are saved
 7. guest execution resumes at the callback, in **"Primary"** context
 
+<br>
 
 #### AetherVisor sandbox vs. other tools
 
+Other projects use different methods to emulate pieces of code in a sandboxed environment, such as:
+<br>
 
-Other projects utilize other methods to achieve the same goal of dynamically analyzing a program in a sandbox:
+**Qiling and Speakeasy: **  Using a CPU emulator to intercept API calls, memory access, and more
+**KACE: ** Intercepting access to DLLs and system modules using an exception handler
+**Simpleator: ** Using Hyper-V API to create an isolated guest address space and logging Winapi calls
+<br>
 
-
-- **Qiling, Speakeasy:** Uses a CPU emulator to intercept API calls, memory access, and more
-- **KACE:** Intercepts access to DLLs and system modules using an exception handler 
-- **Simpleator:** Uses Hyper-V API to create an isolated guest address space, and logs Winapi calls
-
-
-AetherVisor's advantage is that programs don't have to be emulated from the start, and a fabricated system environment doesn't need to be set up. Programs can be sandboxed on-the-fly, allowing you to analyze highly complex software.
-
+AetherVisor provides an advantage over these projects as it allows code to be sandboxed on-the-fly on real systems, without the need for emulating startup code, or setting up a fabricated system environment. Aethervisor is the only solution feasible for analyzing complex software with many parts.
+<br>
 
 ### Branch Tracing
 
