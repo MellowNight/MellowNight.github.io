@@ -13,7 +13,6 @@ author: MellowNight
   * [Setting up the VMCB](#setting-up-the-vmcb)
   * [MSR intercepts](#msr-intercepts)
   * [Setting up nested paging](#setting-up-nested-paging)
-    + [Here's how to set up an nested page directory with identity mapping:](#here-s-how-to-set-up-an-nested-page-directory-with-identity-mapping-)
   * [vmmcall interface](#vmmcall-interface)
   * [VM launch and VM exit operation](#vm-launch-and-vm-exit-operation)
   * [Stopping the hypervisor](#stopping-the-hypervisor)
@@ -488,7 +487,7 @@ LaunchVm endp
 
 ## Features
 
-In this second section, I will explain the implementation details of features provided by AetherVisor.
+In this last section, I will explain the implementation details of features provided by AetherVisor.
 
 <br>
 
