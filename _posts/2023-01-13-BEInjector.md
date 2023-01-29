@@ -64,6 +64,8 @@ This post will go over the process of injecting a DLL and making its memory most
 
 &emsp;&emsp;I plugged Overwolf's signed OWClient.dll into my injector to use as a host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version x.x.x has a xxxkb .text section and a xxxkb .data section.
 
+<br>
+
 [INSERT OWCLIENT PICTURE HERE]
 
 <br>
@@ -96,11 +98,11 @@ HHOOK SetWindowsHookExA(
 
 <br>
 
-&emsp;&emsp;SetWindowsHookEx loads the DLL into the process that owns the thread with the ID dwThreadId, and then calls the hook routine specified by lpfn. The documentation doesn't mention that it also automatically calls the entry point. The entry point will cause crashes later down the line. 
+&emsp;&emsp;SetWindowsHookEx loads the DLL into the process that owns the thread with the ID dwThreadId, and then calls the hook routine specified by lpfn. The documentation doesn't mention that it also automatically calls the entry point. Calling the entry point has potential issues that we'll need to avoid later down the line. 
 
 <br>
 
-&emsp;&emsp;Some DLLs will unload itself when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL.  We don't need to execute the entry point, we just need the DLL to be loaded. 
+&emsp;&emsp;The first problem is that some DLLs will unload themselves when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL. We don't need to execute the entry point, we just need the DLL to be loaded. 
 
 <br> 
 
@@ -110,7 +112,7 @@ HHOOK SetWindowsHookExA(
 
 ### Manually mapping our payload DLL
 
-After loading the host DLL, we prepare our payload DLL for manual mapping like any other injector. This includes remapping sections to their relative virtual addresses, resolving relocations, and resolving imports. In this next section, we'll go over how the payload is hidden from anti-cheat memory scans.
+After loading the host DLL, we prepare our payload DLL for manual mapping like any other injector. This includes remapping sections to their relative virtual addresses, resolving relocations, and resolving imports. In this next section, we'll go over how our own payload DLL is mapped to the target process.
 
 <br>
 
@@ -120,7 +122,7 @@ After loading the host DLL, we prepare our payload DLL for manual mapping like a
 
 <br>
 
-&emsp;&emsp;Our objective here is to map the entire payload inside of the NPT hook shadow pages. We are treating entire 4kb pages in the payload as if it's some hook shellcode. This way, our DLL memory will only be visible while it is executing.
+&emsp;&emsp;Our objective here is to map the entire payload inside of the NPT hook shadow pages. This way, our DLL memory will only be visible while it is executing.
 
 <br>
 
@@ -133,31 +135,45 @@ for (offset = cheat_mapped; offset < cheat_mapped + cheat_size; offset += PAGE_S
 }	
 ```
 <br>
-&emsp;&emsp;The SetNptHook function is used to hide each payload DLL page in the target process. I pass each payload page through the "hook_shellcode" argument and each host DLL page through "hook_target", replacing many pages at the start of the host DLL. Since SetNptHook only works on memory within the caller's process, I wrote a kernel driver to attach to the target using KeStackAttachProcess, to hide my payload DLL pages.
+&emsp;&emsp;The SetNptHook function is used to install hidden NPT hooks. It only works within the caller's process, so I wrote a kernel driver to attach to the target process using KeStackAttachProcess and hide the payload DLL pages. The 4KB payload pages are passed through the "hook_shellcode" argument, and the host DLL pages through "hook_target". We are replacing many pages at the beginning of the host DLL.
 
 <br>
 
-Here's how we map a page of our DLL into the 
-
-1. Attach to the target 
-2. Make a NonPagedPool copy of the target page 
-3. copy the hook shellcode to copied page + hook page offset.    
-4. Give rwx permissions to the nPTE of the copy page, in **"shadow"** ncr3
-5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
-6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
-
-
+*NOTE: spamming #VMEXIT in a loop like this could lead to a CLOCK_WATCHDOG_TIMEOUT, if the SetNptHook() routine isn't well optimized enough.*
 
 <br>
 
-#### Preventing OWClient from being called twice
+Here's how Driver::SetNptHook maps in a page from our DLL:
 
-This is because OWClient.dll is context-aware, and tries to access Overwolf data that isn't present.
+<br>
 
-### Why are WinAPI functions crashing!?
+1. __writecr3() to attach to the process context saved in VMCB
+2. Create a non-paged pool shadow copy of the host DLL 4KB page
+3. Copy the 4KB page from our own DLL to this **shadow** copy.    
+4. Update the target page nPTE's PFN in the **shadow** nCR3 to our **shadow** page 
+5. Set the permissions of the **shadow** nCR3 nPTE to RWX
+6. Set the permissions of the **primary** nCR3 nPTE (which points to the original host DLL page) to rw-only
+7. Create an MDL to lock the hooked page's virtual address to the guest and host physical addresses.
 
+<br>
 
-## Alternative plans 
+[INSERT INJECTOR DIAGRAM HERE]
+
+<br>
+
+Upon executing the RW-only regions in the host DLL, #NPF will be thrown, causing the hypervisor to switch to the shadow nCR3 and revealing the payload DLL. When RIP leaves the memory range of our payload DLL, another #NPF is thrown, causing the hypervisor to switch back to the primary nCR3, hiding the payload.
+
+#### Calling the entry point
+
+We are going to use SetWindowsHookEx again to call the entry point for our hidden DLL. [Earlier](#setwindowshookex---loading-the-host-dll), I mentioned a potential problem caused by SetWindowsHookEx automatically calling the entry point. 
+
+Another problem problem is that OWClient.dll's entry point crashes, because it tries to access Overwolf data that isn't present.
+
+### Why I'm unable to hide the entire DLL
+
+Why are WinAPI functions crashing!?
+
+## Limitations & Alternative ideas
 
 2D injector has two issues:
 - Performance: Every API call, exception, and syscall will throw #NPF and trigger an nCR3 switch. This caused a noticeable FPS drop when running internal cheats.

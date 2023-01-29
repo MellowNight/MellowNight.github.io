@@ -543,7 +543,7 @@ through the PKRU register and allowing execution through the page table. Memory 
 
 <br>
 
-&emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** nCR3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **primary** nCR3 is used. Upon executing the hooked page, #NPF is thrown and the guest switches to the **shadow** nCR3 context. The guest switches back to **primary** nCR3 context whenever RIP goes outside of the hooked page.
+&emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** nCR3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **primary** nCR3 is used. Upon executing the hooked page, #NPF is thrown and AetherVisor switches the guest to the **shadow** nCR3 context. AetherVisor switches back to **primary** nCR3 context whenever RIP goes outside of the hooked page.
 
 <br>
 
@@ -552,11 +552,12 @@ The following steps describe how the NPT hook is set:
 <br>
 
 1. __writecr3() to attach to the process context saved in VMCB
-2. Make a NonPagedPool **shadow** copy of the target page 
-3. Copy the hook shellcode to **shadow** page + hook page offset.    
-4. Give rwx permissions to the nPTE of the copy page, in **shadow** ncr3
-5. Set the nPTE permissions of the original target page to rw-only in **primary** (so that we can trap on execute access) 
-6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. *If the hooked page is paged out, then your NPT hook will redirect execution on some unknown memory page!!!*
+2. Create a non-paged pool shadow copy of the target 4KB page
+3. Copy the hook shellcode to **shadow** copy + hook page offset.    
+4. Update the target page nPTE's PFN in the **shadow** nCR3 to the **shadow** copy 
+5. Set the permissions of the **shadow** nCR3 nPTE to RWX
+6. Set the permissions of the **primary** nCR3 nPTE (which points to the hookless copy of the target page) to rw-only
+7. Create an MDL to lock the hooked page's virtual address to the guest and host physical addresses. *If our target page is paged out, then the NPT hook will redirect execution for some unknown memory page!!!*
 
 <br>
 
