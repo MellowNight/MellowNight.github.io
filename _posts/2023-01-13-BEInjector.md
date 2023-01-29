@@ -24,15 +24,17 @@ date: 2023-01-10 02:02:02 -0000
 
 <br>
 
-This post will go over the process of making a DLL's memory mostly invisible through nested page table manipulation. 
+This post will go over the process of injecting a DLL and making its memory mostly invisible through nested page table manipulation. 
 
 <br>
 
-&emsp;&emsp;It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol
+&emsp;&emsp;
 
 <br>
 
-**[SIMPLE DIAGRAM OF 2D INJECTOR HERE]**
+*It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol*
+
+
 
 <br>
 

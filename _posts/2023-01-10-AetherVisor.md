@@ -502,9 +502,7 @@ In this last section, I will explain the implementation details of features prov
 
 <br>
 
-<p align="center">
-	<video src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/ShootergameNptTest.mp4"></video>
-</p>
+https://user-images.githubusercontent.com/66788741/215348869-1f41482f-e0e6-4069-982c-92c8cf591960.mp4
 
 <br>
 
