@@ -495,7 +495,7 @@ through the PKRU register and allowing execution through the page table. Memory 
     
 <br>
 
-Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I needed to somehow hide hooks by trapping on execute.
+&emsp;&emsp;Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, so I needed to somehow hide hooks by trapping on execute.
 
 <br>
 
@@ -595,16 +595,18 @@ This could be used to figure out detection vectors of an anti-cheat, such as the
 #### AetherVisor sandbox vs. other tools
 
 Other projects use different methods to emulate pieces of code in a sandboxed environment, such as:
+
 <br>
 
-**Qiling and Speakeasy:**  Using a CPU emulator to intercept API calls, memory access, and more
+![**Qiling**](https://github.com/qilingframework/qiling) **and** ![**Speakeasy**](https://github.com/mandiant/speakeasy): Uses a CPU emulator to intercept API calls, memory access, and more
+![**KACE:**](https://github.com/waryas/KACE) Intercepts access to DLLs and system modules by blocking access to the DLLs, and using an exception handler to redirect access
 
-**KACE:** Intercepts access to DLLs and system modules by blocking access to the DLLs, and using an exception handler to redirect access
+![**Simpleator:**](https://github.com/ionescu007/Simpleator) Uses the Hyper-V API to create an isolated guest address space and logs Winapi calls
 
-**Simpleator:** Uses the Hyper-V API to create an isolated guest address space and logs Winapi calls
 <br>
 
 &emsp;&emsp;AetherVisor provides an advantage over these projects as it allows code to be sandboxed on-the-fly on real systems, without the need for emulating startup code, or setting up a fabricated system environment. Thus, AetherVisor is the only solution feasible for analyzing stateful software with multiple parts.
+
 <br>
 
 ### Branch Tracing
