@@ -28,47 +28,42 @@ This post will go over the process of making a DLL's memory mostly invisible thr
 
 <br>
 
-It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol
+&emsp;&emsp;It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol
 
 
 **[SIMPLE DIAGRAM OF 2D INJECTOR HERE]**
 
 ## Finding the right host DLL
 
-I will refer to the signed DLL that hosts our own manually mapped DLL as the "host dll". Our only two requirements for a host dll are that:
+&emsp;&emsp;I will refer to the signed DLL that hosts our own manually mapped DLL as the "host dll". Our only two requirements for a host dll are that:
+
+<br>
 
 1. The .text and .data sections of the DLL are large enough 
-&nbsp;
 2. The DLL is allowed to load by the the target process/game 
 
-I plugged Overwolf's signed OWClient.dll into my injector to use as the host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version x.x.x has a xxxkb .text section and a xxxkb .data section.
+<br>
 
-&nbsp;
-&nbsp;
-&nbsp;
-&nbsp;
+&emsp;&emsp;I plugged Overwolf's signed OWClient.dll into my injector to use as the host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version x.x.x has a xxxkb .text section and a xxxkb .data section.
+
+<br>
 
 ## SetWindowsHookEx - loading the host DLL
 
-&nbsp;
-&nbsp;
+&emsp;&emsp;We need to somehow remotely load the host DLL. After reversing Overwolf's DLL injection code, I found out that they use SetWindowsHookEx to inject their DLL. Lets take a look at the SetWindowsHookEx() function on MSDN:
 
-We need to somehow remotely load the host DLL. After reversing Overwolf's DLL injection code, I found out that they use SetWindowsHookEx to inject their DLL. Lets take a look at the SetWindowsHookEx() function on MSDN:
+<br>
 
 *"Installs an application-defined hook procedure into a hook chain. You would install a hook procedure to monitor the system for certain types of events. These events are associated either with a specific thread or with all threads in the same desktop as the calling thread ... SetWindowsHookEx can be used to inject a DLL into another process."*
-&nbsp;
-&nbsp;
-&nbsp;
-&nbsp;
-&nbsp;
-&nbsp;
-d
+
+<br>
+
 ```
 /*
-[in] idHook - The type of hook procedure to be installed.
-[in] lpfn - A pointer to the hook procedure.
-[in] hmod - A handle to the DLL containing the hook procedure pointed to by the lpfn parameter. 
-[in] dwThreadId - The identifier of the thread with which the hook procedure is to be associated. 
+  [in] idHook - The type of hook procedure to be installed.
+  [in] lpfn - A pointer to the hook procedure.
+  [in] hmod - A handle to the DLL containing the hook procedure pointed to by the lpfn parameter. 
+  [in] dwThreadId - The identifier of the thread with which the hook procedure is to be associated. 
 */
 
 HHOOK SetWindowsHookExA(
@@ -78,20 +73,23 @@ HHOOK SetWindowsHookExA(
   [in] DWORD     dwThreadId
 );
 ```
-SetWindowsHookEx loads the DLL into the process that owns the thread with the id dwThreadId, and then calls the hook routine pointed to by lpfn.  The documentation doesn't mention that it automatically calls the entry point. The entry point will cause problems later down the line. 
+
+<br>
+
+&emsp;&emsp;SetWindowsHookEx loads the DLL into the process that owns the thread with the id dwThreadId, and then calls the hook routine pointed to by lpfn.  The documentation doesn't mention that it automatically calls the entry point. The entry point will cause problems later down the line. 
 \
 \
 
 Some DLLs will unload itself when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL.  We don't need to execute the entry point, we just need the DLL to be loaded. 
+
 <br> 
-<br> 
-<br> 
-<br> 
-<br> 
+
 [Diagram for the DLL unload problem]
 
 
 ## manually mapping our own invisible payload
+
+
 
 ### Nested Page Table hooks - review
 
