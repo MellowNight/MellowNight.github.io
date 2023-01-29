@@ -594,7 +594,7 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 **Simpleator: ** Using Hyper-V API to create an isolated guest address space and logging Winapi calls
 <br>
 
-AetherVisor provides an advantage over these projects as it allows code to be sandboxed on-the-fly on real systems, without the need for emulating startup code, or setting up a fabricated system environment. Aethervisor is the only solution feasible for analyzing complex software with many parts.
+AetherVisor provides an advantage over these projects as it allows code to be sandboxed on-the-fly on real systems, without the need for emulating startup code, or setting up a fabricated system environment. Thus, AetherVisor the only solution feasible for analyzing complex software with many parts.
 <br>
 
 ### Branch Tracing
