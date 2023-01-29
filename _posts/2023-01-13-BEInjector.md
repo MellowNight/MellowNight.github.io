@@ -10,9 +10,9 @@ author: MellowNight
   * [SetWindowsHookEx - loading the host DLL](#setwindowshookex---loading-the-host-dll)
   * [Manually mapping our payload DLL](#manually-mapping-our-payload-dll)
     + [Nested Page Table hooks - review](#nested-page-table-hooks---review)
-    + [Preventing OWClient from being called twice](#preventing-owclient-from-being-called-twice)
-  * [Why are WinAPI functions crashing!?](#why-are-winapi-functions-crashing--)
-- [Alternative plans](#alternative-plans)
+    + [Calling the entry point](#calling-the-entry-point)
+  * [Why I'm unable to hide the entire DLL](#why-i-m-unable-to-hide-the-entire-dll)
+- [Limitations & Alternative ideas](#limitations---alternative-ideas)
 
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
