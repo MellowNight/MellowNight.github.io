@@ -496,7 +496,7 @@ Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, 
 
 <br>
 
-&emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Whenever we execute the hooked page, #NPF is thrown and we enter into the **"shadow"** ncr3. The processor switches back to **"primary"** ncr3 whenever RIP goes outside of the hooked page.
+&emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** nCR3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Upon executing the hooked page, #NPF is thrown and the guest switches to the shadow nCR3 context. The guest switches back to primary nCR3 context whenever RIP goes outside of the hooked page.
 
 <br>
 
