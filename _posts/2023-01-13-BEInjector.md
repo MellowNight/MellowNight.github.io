@@ -4,6 +4,21 @@ title: "2D injector - hiding DLLs with nested page tables"
 date: 2023-01-10 02:02:02 -0000
 ---
 
+- [Introduction](#introduction)
+- [Overview](#overview)
+- [Finding the right host DLL](#finding-the-right-host-dll)
+- [SetWindowsHookEx - loading the host DLL](#setwindowshookex---loading-the-host-dll)
+- [Manually mapping our payload DLL](#manually-mapping-our-payload-dll)
+  * [Nested Page Table hooks - review](#nested-page-table-hooks---review)
+  * [Preventing OWClient from being called twice](#preventing-owclient-from-being-called-twice)
+- [can't call API functions](#can-t-call-api-functions)
+- [Alternative plans](#alternative-plans)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
+
+<br>
+
 ## Introduction
 
 &emsp;&emsp;After months of tinkering around with AetherVisor, I wanted to utilize it for something useful. I decided to write a stealthy DLL injector, powered by the features of AetherVisor. After attempting several stupid ideas, I came up with a DLL injector I was finally satisfied with: one that hides the payload inside almost any digitally signed DLL, with the bonus of preventing dumping and debugging. 
@@ -34,7 +49,7 @@ This post will go over the process of injecting a DLL and making its memory most
 
 *It's called 2D injector, because if a linear address space is one-dimensional, wouldn't two coexisting memory mappings at the same address be two dimensions? lol*
 
-
+[INSERT VIDEO HERE]
 
 <br>
 
@@ -122,14 +137,16 @@ for (offset = cheat_mapped; offset < cheat_mapped + cheat_size; offset += PAGE_S
 
 <br>
 
-Here are the steps for hooking 
+Here's how we map a page of our DLL into the 
 
-1. Attacg
+1. Attach to the target 
 2. Make a NonPagedPool copy of the target page 
 3. copy the hook shellcode to copied page + hook page offset.    
 4. Give rwx permissions to the nPTE of the copy page, in **"shadow"** ncr3
 5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. If the hooked page is paged out, then your NPT hook will be active on a completely random physical page!!!
+
+
 
 <br>
 
