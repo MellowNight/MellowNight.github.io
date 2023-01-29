@@ -486,7 +486,9 @@ In this second section, I will explain the implementation details of features pr
 <br>
 
 **SEV-SNP (secure nested paging):** pages in the guest can be restricted to execute-only with VMPL permission masks in the RMP (reverse map table). These RMP permission checks are only in effect when SEV-SNP is enabled. See AMD system programming manual sections 15.36.3 to 15.36.5.  
-      
+
+<br>
+
 **Memory Protection Keys:** execute-only memory can be achieved with with MPK by disabling read access
 through the PKRU register and allowing execution through the page table. Memory protection keys control read and write access to pages, but ignore instruction fetches. See AMD system programming manual section 5.6.7.
     
@@ -505,10 +507,10 @@ The following steps describe how the NPT hook is set:
 <br>
 
 1. __writecr3() to attach to the process context saved in VMCB
-2. Make a NonPagedPool **shadow** copy of the target page 
-3. Copy the hook shellcode to copy page + hook page offset.    
-4. Give rwx permissions to the nPTE of the copy page, in **"shadow"** ncr3
-5. Set the nPTE permissions of the original target page to rw-only in **"primary"** (so that we can trap on executes) 
+2. Make a NonPagedPool shadow copy of the target page 
+3. Copy the hook shellcode to shadow page + hook page offset.    
+4. Give rwx permissions to the nPTE of the copy page, in shadow ncr3
+5. Set the nPTE permissions of the original target page to rw-only in primary (so that we can trap on execute access) 
 6. Create an MDL to lock the target page's virtual address to the guest physical address and, consequently, the host physical address. *If the hooked page is paged out, then your NPT hook will redirect execution on some unknown memory page!!!*
 
 <br>
@@ -522,11 +524,9 @@ The following steps describe how the NPT hook is set:
 
 <br>
 
+
 &emsp;&emsp;One problem was caused by Windows' KVA shadowing feature, which created two CR3 contexts for each process: Usermode dirbase and kernel dirbase. Invoking SetNptHook() from usermode caused the 1st step listed above to crash, because the VMCB would store the usermode dirbase, where AetherVisor's code wasn't even mapped. Any process interfacing with AetherVisor must run as administrator to prevent this crash!
 
-<br>
-
-After setting the NPT hook, the hooked page will throw #NPF vmexit on instruction fetch. This is how the #NPF is handled:
 
 
 **[AMD NPT hook diagram here, WITH STEPS!!!]**
