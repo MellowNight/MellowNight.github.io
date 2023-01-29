@@ -12,7 +12,7 @@ date: 2023-01-10 02:02:02 -0000
 
 ## Overview
 
-&emsp;&emsp;The principle of 2D injector is similar to that of "RWX" injectors like [SWH injector](https://github.com/M-r-J-o-h-n/SWH-Injector), which can be used for hiding malicious code from anti-cheats and AVs/EDRs.
+&emsp;&emsp;The principle of 2D injector is similar to that of "RWX" injectors like [SWH injector](https://github.com/M-r-J-o-h-n/SWH-Injector), which can be used for hiding malicious code from anti-cheats and antivirus/EDR solutions.
 
 <br>
 
@@ -89,35 +89,40 @@ HHOOK SetWindowsHookExA(
 
 [Diagram for the DLL unload problem]
 
+<br>
 
-## manually mapping our own invisible payload
+## Manually mapping our payload DLL
 
+After loading the host DLL, we prepare our payload DLL for manual mapping like any other injector. This involves remapping sections to their relative virtual addresses, resolving relocations, and resolving imports. In this next section, we'll go over how the payload is hidden from anti-cheat memory scans.
 
+<br>
 
 ### Nested Page Table hooks - review
 
-&emsp;&emsp;AetherVisor's a Nested page table (NPT) hook feature will create a shadow copy of a page, that is mapped in instead of the original page when RIP enters the page. My implementation of NPT hooking is described in more detail in my AetherVisor post{LINK TO AETHERVISOR POST}
+&emsp;&emsp;AetherVisor's a Nested page table (NPT) hook feature will create a shadow copy of a page, that is mapped in instead of the original page when RIP enters the page. My implementation of NPT hooking is described in more detail in my [AetherVisor writeup](https://mellownight.github.io/2023/01/19/AetherVisor.html)
 
 <br>
 
-&emsp;&emsp;Our objective here is to hide the entire payload inside of the NPT hook shadow pages. We are treating entire 4kb pages in the payload as if it's some hook shellcode. 
+&emsp;&emsp;Our objective here is to map the entire payload inside of the NPT hook shadow pages. We are treating entire 4kb pages in the payload as if it's some hook shellcode. This way, our DLL memory will only be visible while it is executing.
 
 <br>
 
-*The concept is pretty simple, here's pseudocode:*
+*The concept is pretty simple, here's pseudocode for mapping our entire DLL payload inside the shadow copy of a legit DLL:*
 <br>
 ```
-for (offset = cheat_mapped; offset < (cheat_mapped + rdata_offset); offset += PAGE_SIZE)
+for (offset = cheat_mapped; offset < cheat_mapped + cheat_size; offset += PAGE_SIZE)
 {
-    Driver::SetNptHook(pid, PAGE_SIZE, cheat_base + (offset - cheat_mapped), offset);
+    Driver::SetNptHook(target_processid, PAGE_SIZE, host_dll_base + (offset - cheat_mapped), offset);
 }	
 ```
-
-&emsp;&emsp;The SetNptHook() API function only works on memory inside of the caller's process context, so I had to write a kernel driver to attach to the target process (using KeStackAttachProcess) to map in my payload. 
+<br>
+&emsp;&emsp;The SetNptHook function is used to hide each payload DLL page in the target process. I pass each payload page through the "hook_shellcode" argument and each host DLL page through "hook_target", replacing many pages at the start of the host DLL. Since SetNptHook only works on memory within the caller's process, I wrote a kernel driver to attach to the target using KeStackAttachProcess, to hide my payload DLL pages.
 
 <br>
 
-1. __writecr3() to attach to the process cr3 saved in VMCB
+Here are the steps for hooking 
+
+1. Attacg
 2. Make a NonPagedPool copy of the target page 
 3. copy the hook shellcode to copied page + hook page offset.    
 4. Give rwx permissions to the nPTE of the copy page, in **"shadow"** ncr3
