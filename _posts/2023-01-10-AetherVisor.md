@@ -335,7 +335,6 @@ To completely stop the hypervisor, we vmexit out of guest state, disable SVM, lo
 
 There are multiple steps involved. In the C++ vmexit handler, we do the following:
 
-
 <br>
 
 In HandleVmexit():
@@ -457,12 +456,15 @@ LaunchVm endp
 
 <br>
 
-&emsp;&emsp;I came to the conclusion that I received the critical error because AetherVisor was initialized from within kdmapper's process context, thus KDMapper's CR3 would have been saved in guest VMCB. After guest mode is launched, the KDmapper process exits inside guest mode, but the host page tables (used for vmexit handlers) are still using the KDMapper's CR3! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
+&emsp;&emsp;I came to the conclusion that I received the crash because AetherVisor was initialized from within kdmapper's process context, thus KDMapper's CR3 would have been saved in guest VMCB. After guest mode is launched, the KDmapper process exits inside guest mode, but the host page tables (used for vmexit handlers) are still using the KDMapper's CR3! I fixed this by launching my hypervisor from a system thread, in the context of system process, which never exits.  
 
+<br>
 
 ## Features
 
 In this second section, I will explain the implementation details of features provided by AetherVisor.
+
+<br>
 
 ### Nested Page Table hooks
 
@@ -472,10 +474,14 @@ In this second section, I will explain the implementation details of features pr
 <br>
 
 &emsp;&emsp;Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can handle EPT faults caused by attempted reads from the page, and redirect the read to the copy page. The hooked page is restored on EPT faults thrown by instruction fetches from the page. 
+<br>
 
 [Intel EPT hook diagram here]
 
-&emsp;&emsp;AMD nested page tables do not support the execute-only permission, so AMD system programmers might need to trap every execute access to the hook page, which causes overhead. Two workarounds can be considered if you really want execute only pages:
+
+<br>
+
+&emsp;&emsp;AMD nested page tables do not support the execute-only permission, so AMD system programmers might need to trap every execute access to the hook page, which causes overhead. Two workarounds can be considered to achieve execute-only pages on AMD:
 
 <br>
 
@@ -491,6 +497,12 @@ Unfortunately, none of these features were supported on my AMD ryzen 2400G CPU, 
 <br>
 
 &emsp;&emsp;To start off, I set up two ncr3 direcories: a **"shadow"** ncr3 with every page set to read/write only, and a **"primary"** ncr3 with every page allowing read/write/execute permissions. By default, the **"primary"** nCR3 is used. Whenever we execute the hooked page, #NPF is thrown and we enter into the **"shadow"** ncr3. The processor switches back to **"primary"** ncr3 whenever RIP goes outside of the hooked page.
+
+<br>
+
+The following steps describe how the NPT hook is set:
+
+<br>
 
 1. __writecr3() to attach to the process context saved in VMCB
 2. Make a NonPagedPool **shadow** copy of the target page 
