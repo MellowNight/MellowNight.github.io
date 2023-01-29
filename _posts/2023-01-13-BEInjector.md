@@ -6,15 +6,21 @@ date: 2023-01-10 02:02:02 -0000
 
 ## Introduction
 
-After months of tinkering around with AetherVisor, I desperately wanted to utilize it for something useful. I decided to write a stealthy DLL injector, powered by the capabilities of my hypervisor. After attempting several stupid ideas, I came up with a DLL injector I was finally satisfied with: one that completely hides the payload inside almost any digitally signed DLL, with the bonus of preventing dumping and debugging. 
+&emsp;&emsp;After months of tinkering around with AetherVisor, I wanted to utilize it for something useful. I decided to write a stealthy DLL injector, powered by the features of AetherVisor. After attempting several stupid ideas, I came up with a DLL injector I was finally satisfied with: one that hides the payload inside almost any digitally signed DLL, with the bonus of preventing dumping and debugging. 
+
+<br>
 
 ## Overview
 
-The principle of 2D injector is similar to that of "RWX" injectors like SWH injector https://github.com/M-r-J-o-h-n/SWH-Injector, which can be used for hiding malicious code from anti-cheats and AVs/EDRs.
+&emsp;&emsp;The principle of 2D injector is similar to that of "RWX" injectors like SWH injector https://github.com/M-r-J-o-h-n/SWH-Injector, which can be used for hiding malicious code from anti-cheats and AVs/EDRs.
 
-Essentially, some signed DLLs, especially packed signed DLLs, might have a section marked as readable, writable, and executable that is large enough to fit a manually-mapped DLL. Code mapped inside an RWX section can bypass detections for process hollowing, because the host DLL is signed and it's difficult to check the integrity of writable sections. But, not all detection vectors will be bypassed; the RWX section can still be scanned for malicious signatures.
+<br>
 
-I wanted to hide from more than just DLL certificate checks, and I didn't want to rely on RWX dlls, which are pretty uncommon. Why not just abuse the far more common "RX" sections (i.e. the .text section) instead?
+&emsp;&emsp;Essentially, some signed DLLs, especially packed signed DLLs, might have a section marked as readable, writable, and executable that is large enough to fit a manually-mapped DLL. Code mapped inside an RWX section can bypass detections for process hollowing, because the host DLL is signed and it's difficult to check the integrity of writable sections. But, not all detection vectors will be bypassed; the RWX section can still be scanned for malicious signatures.
+
+<br>
+
+&emsp;&emsp;I wanted to hide from more than just DLL certificate checks, and I didn't want to rely on RWX dlls, which are pretty uncommon. Why not just abuse the far more common "RX" sections (i.e. the .text section) instead?
 
 This post will go over the process of making a DLL's memory mostly invisible through nested page table manipulation. 
 

@@ -7,6 +7,31 @@ author: MellowNight
 
 <br>
 
+- [Introduction](#introduction)
+- [Virtual machine setup](#virtual-machine-setup)
+  * [Checking for AMD-V support](#checking-for-amd-v-support)
+  * [Setting up the VMCB](#setting-up-the-vmcb)
+  * [MSR intercepts](#msr-intercepts)
+  * [Setting up nested paging](#setting-up-nested-paging)
+    + [Here's how to set up an nested page directory with identity mapping:](#here-s-how-to-set-up-an-nested-page-directory-with-identity-mapping-)
+  * [vmmcall interface](#vmmcall-interface)
+  * [VM launch and VM exit operation](#vm-launch-and-vm-exit-operation)
+  * [Stopping the hypervisor](#stopping-the-hypervisor)
+- [Loading the hypervisor](#loading-the-hypervisor)
+- [Features](#features)
+  * [Nested Page Table hooks](#nested-page-table-hooks)
+  * [Sandboxing](#sandboxing)
+    + [Intercepting out-of-sandbox code execution](#intercepting-out-of-sandbox-code-execution)
+    + [Intercepting out-of-sandbox memory access](#intercepting-out-of-sandbox-memory-access)
+    + [AetherVisor sandbox vs. other tools](#aethervisor-sandbox-vs-other-tools)
+  * [Branch Tracing](#branch-tracing)
+  * [Process-specific syscall hooks](#process-specific-syscall-hooks)
+- [Future plans](#future-plans)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
+<br>
+
 ## Introduction
 
 &emsp;&emsp;A while ago, I wrote AetherVisor: a stealthy dynamic analysis and memory hacking framework, based on a type-2 AMD hypervisor. I no longer want to treat protected software as a black box, so I paused this project to study other topics such as x86 deobfuscation. AetherVisor is a minimal hypervisor, so it may be unstable, and many special instruction intercepts aren't supported. For more robust and stable tool development, it's better to use more established options like KVM. Although KVM has its advantages, AetherVisor remains a valuable tool for building minimal, stealthy, debugger tools and writing hacks.
@@ -635,8 +660,9 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 in progress...
 
+<br>
 
 ## Future plans
 
-I want to use AetherVisor's functionality to create projects like comprehensive HWID spoofers, stealthy DLL injectors, or x64dbg extensions. If I ever decide to extend my hypervisor, I would add LWP and .
+I want to use AetherVisor's functionality to create projects like, DLL injectors, x64dbg extensions, or comprehensive HWID spoofers. If I ever decide to extend my hypervisor, I would add LWP, and I would harden it against anti-viruses/anti-cheats.
 
