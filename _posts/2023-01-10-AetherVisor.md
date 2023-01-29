@@ -613,14 +613,16 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-&emsp;&emsp;The problem with my implementation is that #DB is thrown on every branch, causing a lot of overhead. I thought of collecting branch information in the LBR stack instead of single-stepping every branch, but on AMD, there's no way to signal when the LBR stack is full 😔😔. I considered using Lightweight Profiling (LWP), which has a lot more fine-grained controls for tracing instructions, but it only works in usermode. Still, LWP is a useful feature that can be added later.
+&emsp;&emsp;The problem with my implementation is that #DB is thrown on every branch, causing a lot of overhead. I thought of collecting branch information in the LBR stack instead of single-stepping every branch, but on AMD, there's no way to signal when the LBR stack is full 😔😔. I considered using Lightweight Profiling (LWP), which has a lot more fine-grained controls for tracing instructions, but it only works in usermode. Still, LWP = a useful feature that can be added later.
 
 <br>
 
-&emsp;&emsp;When I wanted to test branch tracing, I struggled for hours due to the way VMware and Windows messed with the debugctl MSR. 
+&emsp;&emsp;When I wanted to test branch tracing, I struggled for hours due to the way VMware and Windows messed with the debugctl MSR.
 
-&emsp;&emsp;First of all, VMware was forcing all debugctl bits to 0, which meant that I had to do some testing outside of VMware. 
+&emsp;&emsp;First of all, VMware was forcing all debugctl bits to 0, which meant that I had to do some testing outside of VMware.
+
 <br>
+
 &emsp;&emsp;Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). In this manner, Windows manages extended debug features, and my changes this debugctl are essentially ignored. 
 
 <br>
