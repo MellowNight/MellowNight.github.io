@@ -164,7 +164,9 @@ Here's how Driver::SetNptHook maps in a page from our DLL:
 
 <br>
 
-[INSERT INJECTOR DIAGRAM HERE]
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/2DInjectorDiagram.png">
+</p>
 
 <br>
 
