@@ -175,11 +175,11 @@ strong {
 }
 
 section {
-  position: absolute;
-  width: 750px;
-  float: right;
+  position: unset;
+  width: min-content;
+  float: unset;
   padding-bottom: 30px;
-  right: 250px;
+//  right: 250px;
 }
 
 small {
