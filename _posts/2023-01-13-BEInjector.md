@@ -21,7 +21,7 @@ author: MellowNight
 
 <br>
 
-github repo can be found here: [AetherVisor](https://github.com/MellowNight/ForteVisor)
+github repo can be found here: [2D-Injector](https://github.com/MellowNight/2D-Injector)
 
 <br>
 
@@ -69,11 +69,14 @@ This post will go over the process of injecting a DLL and making its memory most
 
 <br>
 
-&emsp;&emsp;I plugged Overwolf's signed OWClient.dll into my injector to use as a host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version x.x.x has a xxxkb .text section and a xxxkb .data section.
+&emsp;&emsp;I plugged Overwolf's signed OWClient.dll into my injector to use as a host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version 0.217.0.9 has a xxxkb .text section and a xxxkb .data section.
 
 <br>
 
-[INSERT OWCLIENT CFF PICTURE HERE]
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/OWClientCFF.PNG">
+</p>
+
 
 <br>
 
@@ -213,6 +216,6 @@ The only solution is to align the .rdata of our payload DLL with the .data secti
 
 <br>
 
-- Performance: Every API call, exception, and syscall triggers an #NPF vmexit. Not only that, but vmexit is also triggered every time a hidden hook is executed. The frequent vmexits caused a noticeable FPS drop with some of my internal cheats. 
-- Detection: The .rdata and .data sections are exposed, and can be scanned for suspicious strings. This can be partially fixed by encrypting .rdata strings, but some other suspicious data structures can't easily be encrypted.
+- **Performance:** Every API call, exception, and syscall triggers an #NPF vmexit. Not only that, but vmexit is also triggered every time a hidden hook is executed. The frequent vmexits caused a noticeable FPS drop with some of my internal cheats. 
+- **Detection:** The .rdata and .data sections are exposed, and can be scanned for suspicious strings. This can be partially fixed by encrypting .rdata strings, but some other suspicious data structures can't easily be encrypted.
 
