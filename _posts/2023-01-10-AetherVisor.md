@@ -569,7 +569,7 @@ The following steps describe how the NPT hook is set:
 
 <br>
 
-![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/NptHookDiagram.png "Logo Title Text 1")
+![alt text](https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/NPTHookDiagram.png "Logo Title Text 1")
 
 
 <br>
