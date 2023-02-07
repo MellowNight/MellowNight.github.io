@@ -64,12 +64,12 @@ This post will go over the process of injecting a DLL and making its memory most
 
 <br>
 
-1. The .text and .data sections of the DLL are large enough 
+1. The .text, .rdata, and .data sections of the DLL are large enough 
 2. The DLL is allowed to load by the the target process/game 
 
 <br>
 
-&emsp;&emsp;I plugged Overwolf's signed OWClient.dll into my injector to use as a host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version 0.217.0.9 has a xxxkb .text section and a xxxkb .data section.
+&emsp;&emsp;I plugged Overwolf's signed OWClient.dll into my injector to use as a host dll. Overwolf is an overlay software used on pretty much every game, so Battleye and EasyAntiCheat will gladly accept its DLLs. Version 0.217.0.9 has a ~689 kb .text section, a ~231 kb .rdata section, and a ~95 kb .data section.
 
 <br>
 
