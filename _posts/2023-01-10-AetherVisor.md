@@ -500,10 +500,6 @@ In this last section, I will explain the implementation details of features prov
 
 <br>
 
-*What happened to the mov instruction at 0:29? 😳*
-
-<br>
-
 <details open="" class="details-reset border rounded-2">
   <summary class="px-3 py-2">
     <svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="octicon octicon-device-camera-video">
@@ -573,6 +569,8 @@ The following steps describe how the NPT hook is set:
 
 
 <br>
+
+<br>
 #### Really annoying problems
 
 It took an absurd amount of time to get the NPT hooking feature to work properly. I spent months figuring out how to fix some nasty bugs: 
@@ -588,6 +586,14 @@ It took an absurd amount of time to get the NPT hooking feature to work properly
 <br>
 
 **Hooking copy-on-write pages:**  I wanted to NPT hook functions in ntdll.dll and kernel32.dll, but setting an NPT hook does not trigger COW. why the fuck did I spend 2 weeks trying to point guest PTE to a copy of the hook page? I even went as far as to patch Windows memory management functions to prevent PFN inconsistency bugchecks 🤦‍♂️. It was foolish of me to try and recreate COW instead of just normally triggering COW (see TriggerCOWAndPageIn() (link)). 
+
+<br>
+
+#### Example: Hidden inline swapchain::present hook
+
+*What happened to the mov instruction at 0:29? 😳*
+
+
 
 <br>
 
@@ -660,9 +666,15 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
+#### Example: Finding out what APIs Battleye uses to verify DLL certificates
+
+[INSERT PICTURE HERE]
+
+<br>
+
 ### Branch Tracing
 
-&emsp;&emsp;The branch tracing feature in AetherVisor uses a combination of Last Branch Record (LBR) and Branch Trap Flag (BTF), to notify the VMM whenever a branch is executed.
+&emsp;&emsp;The branch tracing feature in AetherVisor uses Last Branch Record (LBR) and Branch Trap Flag (BTF), to notify the VMM whenever a branch is executed.
 
 <br>
 
@@ -676,15 +688,22 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-&emsp;&emsp;Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). In this manner, Windows manages extended debug features, and my changes this debugctl are essentially ignored. 
+&emsp;&emsp;Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). Hence, Windows manages extended debug features, and my changes to debugctl are essentially ignored. 
+
+
+#### Example: Tracing a VMProtected function
+
+[INSERT PICTURE HERE]
 
 <br>
-
 
 ### Process-specific syscall hooks
 
 
 in progress...
+
+#### Example: Logging Battleye syscalls
+
 
 <br>
 
