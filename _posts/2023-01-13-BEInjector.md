@@ -49,7 +49,10 @@ This post will go over the process of injecting a DLL and making its memory most
 
 <br>
 
-[INSERT VIDEO HERE]
+*The real entry point bytes are invisible:*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/2DInjectorOverview.jpg">
+</p>
 
 <br>
 
