@@ -218,6 +218,12 @@ The only solution is to align the .rdata of our payload DLL with the .data secti
 
 <br>
 
+On paper, 2D injector is almost perfect, but there are two major caveats:
+
 - **Performance:** Every API call, exception, and syscall triggers an #NPF vmexit. Not only that, but vmexit is also triggered every time a hidden hook is executed. The frequent vmexits caused a noticeable FPS drop with some of my internal cheats. 
+
 - **Detection:** The .rdata and .data sections are exposed, and can be scanned for suspicious strings. This can be partially fixed by encrypting .rdata strings, but some other suspicious data structures can't easily be encrypted.
 
+<br>
+
+As I write this, I'm adding new features to AetherVisor. With a hypervisor, there are a MILLION better ways to bypass, reverse, or attack an anti-cheat. Be creative 🚀🚀🚀.
