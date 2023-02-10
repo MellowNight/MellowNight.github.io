@@ -193,7 +193,7 @@ Another problem is that OWClient.dll's entry point crashes, because it tries to 
 
 <br>
 
-[CHEAT ENGINE SCREENSHOT HERE]
+[INSERT CHEAT ENGINE SCREENSHOT HERE]
 
 <br>
 
@@ -205,7 +205,7 @@ The only solution is to align the .rdata of our payload DLL with the .data secti
 
 <br>
 
-[RDATA ALIGNMENT DIAGRAM HERE:]
+[INSERT RDATA ALIGNMENT DIAGRAM HERE:]
 
 
 <br>

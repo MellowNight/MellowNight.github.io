@@ -662,7 +662,7 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-&emsp;&emsp;AetherVisor provides an advantage over these projects as it allows code to be sandboxed on-the-fly on real systems, without the need for emulating startup code, or setting up a fabricated system environment. Thus, AetherVisor is the only solution feasible for analyzing stateful software with multiple parts.
+&emsp;&emsp;AetherVisor provides an advantage over these projects as it allows code to be sandboxed on-the-fly, without the need for emulating startup code, or setting up a fabricated system environment. Thus, AetherVisor is useful for analyzing large, stateful software with multiple parts.
 
 <br>
 
@@ -688,7 +688,7 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-&emsp;&emsp;Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). Hence, Windows manages extended debug features, and my changes to debugctl are essentially ignored. 
+&emsp;&emsp;Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). Hence, Windows manages extended debug features, and my changes to debugctl are ignored. 
 
 
 #### Example: Tracing a VMProtected function
@@ -697,17 +697,22 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-### Process-specific syscall hooks
+### Process-specific system call hooks
+
+&emsp;&emsp; The syscall hook is implemented in the same way as in Daax's blog and HyperDbg's source code. The SYSCALL instruction throws #UD when the syscall enable bit in the EFER MSR is zero. AetherVisor just needs to set RIP to a user-registered callback, and then implement the logic of syscall.
 
 
-in progress...
+[INSERT SYSCALL LOGIC HERE]
+
+Obviously, making system calls while a system call hook is being executed will cause an infinite loop. I just used a Thread-local storage variable that can be accessed through gs segment, letting the hypervisor know whether or not a syscall hook is pending.
 
 #### Example: Logging Battleye syscalls
+
 
 
 <br>
 
 ## Future plans
 
-I want to use AetherVisor's functionality to create projects like, DLL injectors, x64dbg extensions, or comprehensive HWID spoofers. If I ever decide to extend my hypervisor, I would add LWP, and I would harden it against anti-viruses/anti-cheats.
+I want to use AetherVisor's functionality to create projects like DLL injectors, x64dbg extensions, or comprehensive HWID spoofers. If I ever decide to extend my hypervisor, I would add LWP, and I would harden it against anti-viruses/anti-cheats.
 
