@@ -139,10 +139,10 @@ kbd {
 }
 
 .sidebar {
-  left: 140px;
-  width: 210px;
+  left: calc(5vw);
+  width: min-content;
   float: left;
-  position: fixed;
+  position: absolute;
   -webkit-font-smoothing: subpixel-antialiased;
   top: 0;
   padding: 58px 90px 50px 0;
@@ -175,11 +175,11 @@ strong {
 }
 
 section {
-  position: unset;
-  width: auto;
-  float: unset;
+  position: absolute;
+  width: min-content;
+  float: left;
   padding-bottom: 30px;
-//  right: 250px;
+  left: 23vw;
 }
 
 small {
