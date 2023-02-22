@@ -523,7 +523,7 @@ In this last section, I will explain the implementation details of features prov
 *An Intel HV can intercept EPT faults caused by attempted reads from the hook page:*
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/EPTHook_state1.jpg">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/EPTHook_state1.png">
 </p>
 
 <br>
@@ -714,28 +714,202 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-&emsp;&emsp;In order to trace programs with heavy anti-debug, we must hide bits 7 & 8 of DR7, the single-step bit of DR6, and the trap flag in RFLAGS. POPFQ is used a lot in VMProtected code, so we also need to ensure that the trap flag isn't disabled.
+&emsp;&emsp;In order to trace programs with heavy anti-debug, we must hide bits 7 & 8 of DR7, the single-step bit of DR6, and the trap flag in RFLAGS. 
 
 <br>
 
 *Emulating debug register reads:*
+```
+// ...
 
+int gpr_number = vmcb.control_area.exitinfo1; 
 
+switch (guest_vmcb.control_area.exit_code)
+{
+case VMEXIT::DR0_READ:
+{
+	guest_ctx[gpr_number] = __readdr(0);
+
+	if (BranchTracer::process_cr3.Flags == guest_vmcb.save_state_area.cr3.Flags)
+	{
+		if (dr0 == BranchTracer::resume_address)
+		{
+			*guest_ctx[gpr_number] = NULL;
+		}
+	}
+
+	break;
+}
+case VMEXIT::DR6_READ:
+{
+	guest_ctx[gpr_number] = __readdr(6);
+
+	if (BranchTracer::process_cr3.Flags == guest_vmcb.save_state_area.cr3.Flags)
+	{
+		((DR6*)guest_ctx[gpr_number])->SingleInstruction = 0;
+	}
+
+	break;
+}
+case VMEXIT::DR7_READ:
+{
+	guest_ctx[gpr_number] = __readdr(7);
+
+	if (BranchTracer::process_cr3.Flags == guest_vmcb.save_state_area.cr3.Flags)
+	{
+		((DR7*)guest_ctx[gpr_number])->Flags &= ~((int64_t)1 << 9);
+		((DR7*)guest_ctx[gpr_number])->Flags &= ~((int64_t)1 << 8);
+		((DR7*)guest_ctx[gpr_number])->GlobalBreakpoint0 = 0;
+		((DR7*)guest_ctx[gpr_number])->Length0 = 0;
+		((DR7*)guest_ctx[gpr_number])->ReadWrite0 = 0;
+	}
+	break;
+}
+default:
+{
+	break;
+}
+}
+
+// omitted code...
+```
+
+<br>
+
+We need to hide single-steping by interceting PUSHFQ and spoofing RFLAGS.TF to 0. POPFQ is used a lot in VMProtected code, so we also need to ensure that the trap flag isn't disabled.
+
+<br>
 
 *Emulating pushfq/popfq:*
 
+```
 
+void VcpuData::PushfExit(GuestRegisters* guest_ctx)
+{
+	if (*(uint8_t*)guest_vmcb.save_state_area.rip == 0x66)
+	{
+		guest_vmcb.save_state_area.rsp -= sizeof(int16_t);
+
+		*(int16_t*)guest_vmcb.save_state_area.rsp = (int16_t)(guest_vmcb.save_state_area.rflags.Flags & 0xFFFF);
+	}
+	else
+	{
+		guest_vmcb.save_state_area.rsp -= sizeof(uintptr_t);
+
+		*(int64_t*)guest_vmcb.save_state_area.rsp = guest_vmcb.save_state_area.rflags.Flags;
+
+		//((RFLAGS*)guest_vmcb.save_state_area.rsp)->ResumeFlag = 0;
+		((RFLAGS*)guest_vmcb.save_state_area.rsp)->Virtual8086ModeFlag = 0;
+
+		if (BranchTracer::process_cr3.Flags == guest_vmcb.save_state_area.cr3.Flags && BranchTracer::active)
+		{
+			((RFLAGS*)guest_vmcb.save_state_area.rsp)->TrapFlag = 0;
+		}
+	}
+
+	guest_vmcb.save_state_area.rip = guest_vmcb.control_area.nrip;
+}
+```
 
 <br>
 
 ### Process-specific system call hooks
 
+<br>
+
 &emsp;&emsp; The syscall hook is implemented in the same way as in Daax's blog and HyperDbg's source code. The SYSCALL instruction throws #UD when the syscall enable bit in the EFER MSR is zero. AetherVisor just needs to set RIP to a user-registered callback, and then implement the logic of syscall.
 
+<br>
 
-[INSERT SYSCALL LOGIC HERE]
+*Syscall emulation logic:*
+```
+if (guest_vmcb.save_state_area.cr3.Flags == process_cr3.Flags)
+{
+	/*  prevent infinite loops caused by syscalling from a syscall hook handler */
 
-Obviously, making system calls while a system call hook is being executed will cause an infinite loop. I just used a Thread-local storage variable that can be accessed through gs segment, letting the hypervisor know whether or not a syscall hook is pending.
+	auto tls_ptr = Utils::GetTlsPtr(guest_vmcb.save_state_area.gs_base, tls_index);
+
+	if (!*tls_ptr)
+	{
+		/*	invoke the syscall callback when our tls flag = 0 */
+
+		captured_rsp = guest_vmcb.save_state_area.rsp;
+		captured_rip = guest_rip;
+
+		captured_retaddr = *(uintptr_t*)guest_vmcb.save_state_area.rsp;
+
+		*tls_ptr = TRUE;
+
+		Instrumentation::InvokeHook(Instrumentation::syscall);
+
+		return false;
+	}
+	else if (
+		guest_vmcb.save_state_area.rsp == captured_rsp &&
+		guest_rip == captured_rip &&
+		captured_retaddr == *(uintptr_t*)guest_vmcb.save_state_area.rsp)
+	{
+		*tls_ptr = FALSE;
+	}
+}
+
+auto insn_len = Disasm::Disassemble(guest_rip).length;
+
+// Save the address of the instruction following SYSCALL into RCX and then
+// load RIP from IA32_LSTAR.
+//
+auto lstar  = __readmsr(IA32_LSTAR);
+guest_ctx->rcx = guest_rip + insn_len;
+guest_vmcb.save_state_area.rip = lstar;
+
+/*  Save RFLAGS into R11 and then mask RFLAGS using IA32_FMASK   */
+
+auto fmask  = __readmsr(IA32_FMASK);
+
+guest_ctx->r11 = guest_vmcb.save_state_area.rflags.Flags;
+
+guest_vmcb.save_state_area.rflags.Flags &= ~(fmask | RFLAGS_RESUME_FLAG_BIT);
+
+/*  Load the CS and SS selectors with values derived from bits 47:32 of IA32_STAR   */
+
+auto star  = __readmsr(IA32_STAR);
+
+guest_vmcb.save_state_area.cs_selector    = (uint16_t)((star >> 32) & ~3);   // STAR[47:32] & ~RPL3
+guest_vmcb.save_state_area.cs_base        = 0;                               // flat segment
+guest_vmcb.save_state_area.cs_limit       = UINT32_MAX;     // 4GB limit
+
+//  Modify code segment
+
+guest_vmcb.save_state_area.cs_attrib.fields.type      = 0xB;
+guest_vmcb.save_state_area.cs_attrib.fields.system    = 1;
+guest_vmcb.save_state_area.cs_attrib.fields.dpl = 0;
+guest_vmcb.save_state_area.cs_attrib.fields.present = 1;
+guest_vmcb.save_state_area.cs_attrib.fields.long_mode = 1;
+guest_vmcb.save_state_area.cs_attrib.fields.default_bit = 0;
+guest_vmcb.save_state_area.cs_attrib.fields.granularity = 1;
+
+
+guest_vmcb.save_state_area.ss_selector = (uint16_t)(((star >> 32) & ~3) + 8); // STAR[47:32] + 8
+guest_vmcb.save_state_area.ss_base = 0;               // flat segment
+guest_vmcb.save_state_area.ss_limit = UINT32_MAX;   // 4GB limit
+																					
+//  Modify Stack segment 
+
+guest_vmcb.save_state_area.ss_attrib.fields.type = 3;
+guest_vmcb.save_state_area.ss_attrib.fields.system = 1;
+guest_vmcb.save_state_area.ss_attrib.fields.dpl = 0;
+guest_vmcb.save_state_area.ss_attrib.fields.present = 1;
+guest_vmcb.save_state_area.ss_attrib.fields.default_bit = 1;
+
+guest_vmcb.save_state_area.ss_attrib.fields.granularity = 1;
+
+guest_vmcb.save_state_area.cpl = 0;
+	
+```
+
+<br>
+
+&emsp;&emsp;Obviously, making system calls while a system call hook is being executed will cause an infinite loop. I just used a Thread-local storage variable that can be accessed through gs segment, letting the hypervisor know whether or not a syscall hook is pending.
 
 <br>
 
