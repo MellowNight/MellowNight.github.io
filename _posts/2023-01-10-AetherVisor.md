@@ -516,13 +516,26 @@ In this last section, I will explain the implementation details of features prov
 
 <br>
 
-&emsp;&emsp;Intel supports execute-only pages through extended page tables, so developers can simply create an execute-only page containing hooks, and a copy of the page, without the hooks. An Intel HV can handle EPT faults caused by attempted reads from the page, and redirect the read to the copy page. The hooked page is restored on EPT faults thrown by instruction fetches from the page.
+&emsp;&emsp;Intel supports execute-only pages through extended page tables, so it's really easy to hide hooks. Developers can set a page to execute-only, and create a hooked copy of the page. 
 
 <br>
 
+*An Intel HV can intercept EPT faults caused by attempted reads from the hook page:*
+
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/EPTHook.png">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/EPTHook_state1.jpg">
 </p>
+
+<br>
+
+*Then, map in the hook copy:*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/EPTHook_state2.jpg">
+</p>
+
+<br>
+
+*The hooked page will be restored on EPT faults thrown by instruction fetches from the page.*
 
 <br>
 
@@ -697,6 +710,24 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
+#### Hiding the debug flags
+
+<br>
+
+&emsp;&emsp;In order to trace programs with heavy anti-debug, we must hide bits 7 & 8 of DR7, the single-step bit of DR6, and the trap flag in RFLAGS. POPFQ is used a lot in VMProtected code, so we also need to ensure that the trap flag isn't disabled.
+
+<br>
+
+*Emulating debug register reads:*
+
+
+
+*Emulating pushfq/popfq:*
+
+
+
+<br>
+
 ### Process-specific system call hooks
 
 &emsp;&emsp; The syscall hook is implemented in the same way as in Daax's blog and HyperDbg's source code. The SYSCALL instruction throws #UD when the syscall enable bit in the EFER MSR is zero. AetherVisor just needs to set RIP to a user-registered callback, and then implement the logic of syscall.
@@ -706,13 +737,9 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 Obviously, making system calls while a system call hook is being executed will cause an infinite loop. I just used a Thread-local storage variable that can be accessed through gs segment, letting the hypervisor know whether or not a syscall hook is pending.
 
-#### Example: Logging Battleye syscalls
-
-
-
 <br>
 
 ## Future plans
 
-I want to use AetherVisor's functionality to create projects like DLL injectors, x64dbg extensions, or comprehensive HWID spoofers. If I ever decide to extend my hypervisor, I would add LWP, and I would harden it against anti-viruses/anti-cheats.
+I want to use AetherVisor to create stuff like DLL injectors, x64dbg extensions, or comprehensive HWID spoofers. If I ever decide to extend the HV itself, I would add LWP. 
 

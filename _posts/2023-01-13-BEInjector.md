@@ -116,9 +116,13 @@ HHOOK SetWindowsHookExA(
 
 The first problem is that some DLLs will unload themselves when the entry point is executed, if they aren't in the right process. You can get around this by allocating and executing a loader stub, that simply calls LoadLibrary() for the signed host DLL. We don't need to execute the entry point, we just need the DLL to be loaded. 
 
-<br> 
+<br>
 
-[Diagram for the DLL unload problem]
+*An alternative to SetWindowsHookEx:*
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/2stageinjection.jpg">
+</p>
 
 <br>
 
