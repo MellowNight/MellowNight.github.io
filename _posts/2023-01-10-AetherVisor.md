@@ -704,9 +704,11 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 &emsp;&emsp;Secondly, Windows only enables LBR and BTF when the context is switched to a thread with DR7 bits 7 and 8 set, respectively (See KiRestoreDebugRegisterState or whatever). Hence, Windows manages extended debug features, and my changes to debugctl are ignored. 
 
 
-#### Example: Tracing a VMProtected function
+#### Example: Tracing a VMProtect ultra function
 
-[INSERT PICTURE HERE]
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/branch_trace.jpg">
+</p>
 
 <br>
 
@@ -915,5 +917,5 @@ guest_vmcb.save_state_area.cpl = 0;
 
 ## Future plans
 
-I want to use AetherVisor to create stuff like DLL injectors, x64dbg extensions, or comprehensive HWID spoofers. If I ever decide to extend the HV itself, I would add LWP. 
+I want to use AetherVisor to create stuff like x64dbg extensions or comprehensive HWID spoofers. If I ever decide to extend the HV itself, I would add LWP. 
 
