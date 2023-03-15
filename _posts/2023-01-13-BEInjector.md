@@ -17,8 +17,6 @@ author: MellowNight
   * [Why I'm unable to hide the entire DLL](#why-i-m-unable-to-hide-the-entire-dll)
 - [Limitations & Alternative ideas](#limitations---alternative-ideas)
 
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
-
 <br>
 
 github repo can be found here: [2D-Injector](https://github.com/MellowNight/2D-Injector)
