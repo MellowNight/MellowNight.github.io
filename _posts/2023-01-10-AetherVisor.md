@@ -635,7 +635,10 @@ It took an absurd amount of time to get the NPT hooking feature to work properly
 4. All registers are saved
 5. guest execution resumes at the callback, in **primary"** context
 
-[INSERT SANDBOX EXECUTE LOG PICTURE HERE]
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/sandbox_execute.PNG">
+</p>
+
 
 <br>
 
@@ -658,7 +661,10 @@ This mechanism can be used to log the exceptions thrown or APIs called by a DLL.
 6. All registers are saved
 7. guest execution resumes at the callback, in **"Primary"** context
 
-[INSERT SANDBOX READ/WRITE LOG PICTURE HERE]
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/sandbox_execute.PNG">
+</p>
+
 
 <br>
 
@@ -684,12 +690,6 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 
 <br>
 
-#### Example: Finding out what APIs Battleye uses to verify DLL certificates
-
-[INSERT PICTURE HERE]
-
-<br>
-
 ### Branch Tracing
 
 &emsp;&emsp;The branch tracing feature in AetherVisor uses Last Branch Record (LBR) and Branch Trap Flag (BTF), to notify the VMM whenever a branch is executed.
@@ -712,7 +712,7 @@ Other projects use different methods to emulate pieces of code in a sandboxed en
 #### Example: Tracing a VMProtect ultra function
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/branch_trace.jpg">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/branch_trace.PNG">
 </p>
 
 <br>
