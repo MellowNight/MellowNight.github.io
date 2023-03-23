@@ -198,7 +198,9 @@ Another problem is that OWClient.dll's entry point crashes, because it tries to 
 
 <br>
 
-[INSERT CHEAT ENGINE SCREENSHOT HERE]
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/loadlibrary_exception.png">
+</p>
 
 <br>
 
@@ -210,8 +212,9 @@ The only solution is to align the .rdata of our payload DLL with the .data secti
 
 <br>
 
-[INSERT RDATA ALIGNMENT DIAGRAM HERE:]
-
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MellowNight/MellowNight.github.io/main/assets/img/rdata_alignment.jpg">
+</p>
 
 <br>
 
