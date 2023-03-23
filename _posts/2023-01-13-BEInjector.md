@@ -3,6 +3,7 @@ layout: post
 title: "2D injector - hiding DLLs with nested page tables"
 date: 2023-01-10 02:02:02 -0000
 author: MellowNight
+permalink: /BEInjector
 ---
 
 <br>

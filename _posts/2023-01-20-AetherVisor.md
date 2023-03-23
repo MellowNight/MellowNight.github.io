@@ -3,7 +3,7 @@ layout: post
 title: "How AetherVisor works under the hood"
 date: 2023-01-19 01:01:01 -0000
 author: MellowNight
-permalink: /_posts/
+permalink: /AetherVisor
 ---
 
 <br>
